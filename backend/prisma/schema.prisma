@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+
+  memberships       GroupMember[]
+  expensesPaid      Expense[]        @relation("ExpensePaidBy")
+  expenseShares     ExpenseShare[]
+  choreAssignments  ChoreAssignment[]
+}
+
+model Group {
+  id         String   @id @default(uuid())
+  name       String
+  inviteCode String   @unique
+  createdAt  DateTime @default(now())
+
+  members  GroupMember[]
+  expenses Expense[]
+  chores   Chore[]
+}
+
+model GroupMember {
+  id       String   @id @default(uuid())
+  userId   String
+  groupId  String
+  joinedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  groupId     String
+  paidById    String
+  description String
+  amountCents Int
+  category    String
+  createdAt   DateTime @default(now())
+
+  group   Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy  User           @relation("ExpensePaidBy", fields: [paidById], references: [id])
+  shares  ExpenseShare[]
+}
+
+model ExpenseShare {
+  id          String @id @default(uuid())
+  expenseId   String
+  userId      String
+  amountCents Int
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, userId])
+}
+
+model Chore {
+  id        String   @id @default(uuid())
+  groupId   String
+  title     String
+  frequency String
+  createdAt DateTime @default(now())
+
+  group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  assignments ChoreAssignment[]
+}
+
+model ChoreAssignment {
+  id          String    @id @default(uuid())
+  choreId     String
+  userId      String
+  dueDate     DateTime
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  chore Chore @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
