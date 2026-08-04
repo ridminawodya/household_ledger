@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import authRouter from "./routes/auth";
+import groupsRouter from "./routes/groups";
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/auth", authRouter);
+app.use("/groups", groupsRouter);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
