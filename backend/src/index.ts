@@ -4,6 +4,7 @@ import cors from "cors";
 import authRouter from "./routes/auth";
 import groupsRouter from "./routes/groups";
 import expensesRouter from "./routes/expenses";
+import choresRouter from "./routes/chores";
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.get("/health", (_req, res) => {
 app.use("/auth", authRouter);
 app.use("/groups", groupsRouter);
 app.use("/expenses", expensesRouter);
+app.use("/chores", choresRouter);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
