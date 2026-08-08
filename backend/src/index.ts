@@ -5,6 +5,7 @@ import authRouter from "./routes/auth";
 import groupsRouter from "./routes/groups";
 import expensesRouter from "./routes/expenses";
 import choresRouter from "./routes/chores";
+import aiRouter from "./routes/ai";
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use("/auth", authRouter);
 app.use("/groups", groupsRouter);
 app.use("/expenses", expensesRouter);
 app.use("/chores", choresRouter);
+app.use("/ai", aiRouter);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
