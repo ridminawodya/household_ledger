@@ -40,9 +40,20 @@ export default function GroupDetailPage() {
               </ul>
             </div>
 
-            <p className="mt-6 text-sm text-gray-500">
-              Expenses, settle-up, and chores views coming next.
-            </p>
+            <div className="mt-6 flex gap-3">
+              <Link
+                to={`/groups/${group.id}/expenses`}
+                className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                Expenses
+              </Link>
+              <span className="rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed">
+                Settle up (coming next)
+              </span>
+              <span className="rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed">
+                Chores (coming next)
+              </span>
+            </div>
           </div>
         )}
       </div>
