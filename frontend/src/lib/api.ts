@@ -120,6 +120,12 @@ export interface ParsedExpense {
   category: string;
 }
 
+export const GROUPS_CHANGED_EVENT = "household-ledger:groups-changed";
+
+function notifyGroupsChanged() {
+  window.dispatchEvent(new Event(GROUPS_CHANGED_EVENT));
+}
+
 export const api = {
   signup: (email: string, password: string, name: string) =>
     request<AuthResponse>("/auth/signup", { method: "POST", body: { email, password, name }, auth: false }),
@@ -128,10 +134,16 @@ export const api = {
     request<AuthResponse>("/auth/login", { method: "POST", body: { email, password }, auth: false }),
 
   createGroup: (name: string) =>
-    request<Group>("/groups", { method: "POST", body: { name } }),
+    request<Group>("/groups", { method: "POST", body: { name } }).then((g) => {
+      notifyGroupsChanged();
+      return g;
+    }),
 
   joinGroup: (inviteCode: string) =>
-    request<Group>("/groups/join", { method: "POST", body: { inviteCode } }),
+    request<Group>("/groups/join", { method: "POST", body: { inviteCode } }).then((g) => {
+      notifyGroupsChanged();
+      return g;
+    }),
 
   listGroups: () => request<Group[]>("/groups"),
 

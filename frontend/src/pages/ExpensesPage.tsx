@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { api, ApiError, type Expense, type GroupDetail, type ParsedExpense } from "../lib/api";
 import { centsToDollarsInput, dollarsToCents, formatCents } from "../lib/money";
 
@@ -104,15 +104,11 @@ export default function ExpensesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="px-4 py-8">
       <div className="max-w-2xl mx-auto">
-        {groupId && (
-          <Link to={`/groups/${groupId}`} className="text-sm text-indigo-600 hover:underline">
-            ← Back to {group?.name ?? "group"}
-          </Link>
-        )}
-
-        <h1 className="text-xl font-semibold text-gray-900 mt-4 mb-6">Expenses</h1>
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">
+          Expenses{group ? ` — ${group.name}` : ""}
+        </h1>
 
         {loadError && <p className="text-sm text-red-600 mb-4">{loadError}</p>}
 

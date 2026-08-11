@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { api, ApiError, type GroupDetail, type SettleTransaction } from "../lib/api";
 import { formatCents } from "../lib/money";
 
@@ -25,15 +25,11 @@ export default function SettleUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="px-4 py-8">
       <div className="max-w-2xl mx-auto">
-        {groupId && (
-          <Link to={`/groups/${groupId}`} className="text-sm text-indigo-600 hover:underline">
-            ← Back to {group?.name ?? "group"}
-          </Link>
-        )}
-
-        <h1 className="text-xl font-semibold text-gray-900 mt-4 mb-6">Settle up</h1>
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">
+          Settle up{group ? ` — ${group.name}` : ""}
+        </h1>
 
         {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
 
