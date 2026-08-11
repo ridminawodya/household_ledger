@@ -118,12 +118,12 @@ export default function ChoresPage() {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
             />
             <select
               value={frequency}
               onChange={(e) => setFrequency(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
             >
               {FREQUENCIES.map((f) => (
                 <option key={f} value={f}>
@@ -135,7 +135,7 @@ export default function ChoresPage() {
             <button
               type="submit"
               disabled={creating}
-              className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+              className="w-full rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
             >
               {creating ? "Adding…" : "Add chore"}
             </button>
@@ -163,22 +163,22 @@ export default function ChoresPage() {
                       </div>
                       <button
                         onClick={() => openAssignForm(chore.id)}
-                        className="text-xs text-indigo-600 hover:underline"
+                        className="text-xs text-navy-600 hover:underline"
                       >
                         Assign
                       </button>
                     </div>
 
                     {turn ? (
-                      <div className="mt-2 flex items-center justify-between rounded-md bg-indigo-50 px-3 py-2">
-                        <p className="text-xs text-indigo-900">
+                      <div className="mt-2 flex items-center justify-between rounded-md bg-navy-50 px-3 py-2">
+                        <p className="text-xs text-navy-900">
                           <span className="font-medium">{turn.user?.name ?? "Someone"}</span>'s turn —
                           due {formatDate(turn.dueDate)}
                         </p>
                         <button
                           onClick={() => handleComplete(turn.id)}
                           disabled={completingId === turn.id}
-                          className="rounded-md bg-white border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+                          className="rounded-md bg-white border border-navy-300 px-2 py-1 text-xs font-semibold text-navy-700 hover:bg-navy-100 disabled:opacity-50"
                         >
                           {completingId === turn.id ? "Marking…" : "Mark complete"}
                         </button>
@@ -238,7 +238,7 @@ export default function ChoresPage() {
                           <button
                             type="submit"
                             disabled={assigning}
-                            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                            className="rounded-md bg-navy-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
                           >
                             {assigning ? "…" : "Save"}
                           </button>

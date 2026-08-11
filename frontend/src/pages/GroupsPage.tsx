@@ -88,7 +88,7 @@ export default function GroupsPage() {
                   <div>
                     <Link
                       to={`/groups/${group.id}`}
-                      className="text-sm font-medium text-indigo-600 hover:underline"
+                      className="text-sm font-medium text-navy-600 hover:underline"
                     >
                       {group.name}
                     </Link>
@@ -116,13 +116,13 @@ export default function GroupsPage() {
                 required
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
               />
               {createError && <p className="text-sm text-red-600">{createError}</p>}
               <button
                 type="submit"
                 disabled={creating}
-                className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                className="w-full rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
               >
                 {creating ? "Creating…" : "Create group"}
               </button>
@@ -138,7 +138,7 @@ export default function GroupsPage() {
                 required
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-navy-500"
               />
               {joinError && <p className="text-sm text-red-600">{joinError}</p>}
               <button

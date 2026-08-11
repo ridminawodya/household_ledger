@@ -125,7 +125,7 @@ export default function ExpensesPage() {
               onChange={(e) => setAiText(e.target.value)}
               placeholder="paid $85 for groceries and pizza last night"
               required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
             />
             {aiError && <p className="text-sm text-red-600">{aiError}</p>}
             <button
@@ -138,8 +138,8 @@ export default function ExpensesPage() {
           </form>
 
           {aiResult && (
-            <div className="mt-4 rounded-md border border-indigo-200 bg-indigo-50 p-4">
-              <p className="text-xs font-medium text-indigo-900 mb-3">
+            <div className="mt-4 rounded-md border border-navy-200 bg-navy-50 p-4">
+              <p className="text-xs font-medium text-navy-900 mb-3">
                 Review before saving — nothing is written until you confirm.
               </p>
               <div className="space-y-2">
@@ -182,7 +182,7 @@ export default function ExpensesPage() {
                 <button
                   onClick={handleConfirmAiExpense}
                   disabled={aiSaving}
-                  className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                  className="rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
                 >
                   {aiSaving ? "Saving…" : "Confirm & save"}
                 </button>
@@ -207,7 +207,7 @@ export default function ExpensesPage() {
               required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
             />
             <div className="grid grid-cols-2 gap-3">
               <input
@@ -218,12 +218,12 @@ export default function ExpensesPage() {
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
               />
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -236,7 +236,7 @@ export default function ExpensesPage() {
             <button
               type="submit"
               disabled={adding}
-              className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+              className="w-full rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
             >
               {adding ? "Adding…" : "Add expense"}
             </button>

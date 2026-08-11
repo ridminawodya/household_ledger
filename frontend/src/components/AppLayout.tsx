@@ -4,8 +4,10 @@ import { useAuth } from "../lib/AuthContext";
 import { api, GROUPS_CHANGED_EVENT, type Group } from "../lib/api";
 
 const groupNavLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `px-3 py-1.5 text-sm font-medium rounded-md ${
-    isActive ? "bg-indigo-100 text-indigo-700" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+  `px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+    isActive
+      ? "bg-navy-100 text-navy-700"
+      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
   }`;
 
 export default function AppLayout() {
@@ -36,9 +38,12 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/groups" className="text-sm font-semibold text-gray-900">
+          <Link
+            to="/groups"
+            className="text-sm font-semibold text-gray-900 transition-opacity hover:opacity-70"
+          >
             Household Ledger
           </Link>
           <div className="flex items-center gap-3">
@@ -46,7 +51,7 @@ export default function AppLayout() {
               <select
                 value={groupId ?? ""}
                 onChange={handleSwitchGroup}
-                className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="animate-scale-in rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 outline-none transition-all focus:border-navy-500 focus:ring-2 focus:ring-navy-500/30"
               >
                 <option value="" disabled>
                   Switch group…
@@ -59,7 +64,10 @@ export default function AppLayout() {
               </select>
             )}
             <span className="text-xs text-gray-500 hidden sm:inline">{user?.name}</span>
-            <button onClick={handleLogout} className="text-xs text-gray-600 hover:text-gray-900">
+            <button
+              onClick={handleLogout}
+              className="text-xs text-gray-600 transition-colors hover:text-gray-900"
+            >
               Log out
             </button>
           </div>
@@ -83,7 +91,9 @@ export default function AppLayout() {
         )}
       </header>
 
-      <Outlet />
+      <div key={location.pathname} className="animate-fade-in">
+        <Outlet />
+      </div>
     </div>
   );
 }

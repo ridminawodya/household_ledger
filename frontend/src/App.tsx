@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./lib/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
+import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import GroupsPage from "./pages/GroupsPage";
@@ -15,6 +16,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route element={<ProtectedRoute />}>
@@ -26,7 +28,6 @@ function App() {
               <Route path="/groups/:groupId/chores" element={<ChoresPage />} />
             </Route>
           </Route>
-          <Route path="/" element={<Navigate to="/groups" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
