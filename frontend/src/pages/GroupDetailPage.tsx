@@ -47,9 +47,12 @@ export default function GroupDetailPage() {
               >
                 Expenses
               </Link>
-              <span className="rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed">
-                Settle up (coming next)
-              </span>
+              <Link
+                to={`/groups/${group.id}/settle-up`}
+                className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                Settle up
+              </Link>
               <span className="rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed">
                 Chores (coming next)
               </span>

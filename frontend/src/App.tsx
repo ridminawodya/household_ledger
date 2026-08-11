@@ -6,6 +6,7 @@ import SignupPage from "./pages/SignupPage";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import ExpensesPage from "./pages/ExpensesPage";
+import SettleUpPage from "./pages/SettleUpPage";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             <Route path="/groups" element={<GroupsPage />} />
             <Route path="/groups/:groupId" element={<GroupDetailPage />} />
             <Route path="/groups/:groupId/expenses" element={<ExpensesPage />} />
+            <Route path="/groups/:groupId/settle-up" element={<SettleUpPage />} />
           </Route>
           <Route path="/" element={<Navigate to="/groups" replace />} />
         </Routes>
