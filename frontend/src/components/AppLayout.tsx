@@ -66,7 +66,7 @@ export default function AppLayout() {
         </div>
 
         {groupId && (
-          <nav className="max-w-2xl mx-auto px-4 pb-2 flex gap-1">
+          <nav className="max-w-2xl mx-auto px-4 pb-2 flex gap-1 overflow-x-auto">
             <NavLink to={`/groups/${groupId}`} end className={groupNavLinkClass}>
               Overview
             </NavLink>

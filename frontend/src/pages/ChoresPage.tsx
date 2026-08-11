@@ -206,7 +206,11 @@ export default function ChoresPage() {
                     )}
 
                     {assigningChoreId === chore.id && (
-                      <form onSubmit={handleAssign} noValidate className="mt-3 flex items-end gap-2">
+                      <form
+                        onSubmit={handleAssign}
+                        noValidate
+                        className="mt-3 flex flex-col sm:flex-row sm:items-end gap-2"
+                      >
                         <div className="flex-1">
                           <label className="block text-xs font-medium text-gray-700 mb-1">Assign to</label>
                           <select
@@ -227,23 +231,25 @@ export default function ChoresPage() {
                             type="date"
                             value={assignDueDate}
                             onChange={(e) => setAssignDueDate(e.target.value)}
-                            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                            className="w-full sm:w-auto rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                           />
                         </div>
-                        <button
-                          type="submit"
-                          disabled={assigning}
-                          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                        >
-                          {assigning ? "…" : "Save"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAssigningChoreId(null)}
-                          className="text-sm text-gray-500 hover:text-gray-900"
-                        >
-                          Cancel
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="submit"
+                            disabled={assigning}
+                            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                          >
+                            {assigning ? "…" : "Save"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAssigningChoreId(null)}
+                            className="text-sm text-gray-500 hover:text-gray-900"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </form>
                     )}
                     {assigningChoreId === chore.id && assignError && (

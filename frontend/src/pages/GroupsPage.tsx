@@ -32,9 +32,13 @@ export default function GroupsPage() {
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     setCreateError(null);
+    if (!groupName.trim()) {
+      setCreateError("Enter a group name");
+      return;
+    }
     setCreating(true);
     try {
-      await api.createGroup(groupName);
+      await api.createGroup(groupName.trim());
       setGroupName("");
       await loadGroups();
     } catch (err) {
@@ -47,9 +51,13 @@ export default function GroupsPage() {
   async function handleJoin(e: FormEvent) {
     e.preventDefault();
     setJoinError(null);
+    if (!inviteCode.trim()) {
+      setJoinError("Enter an invite code");
+      return;
+    }
     setJoining(true);
     try {
-      await api.joinGroup(inviteCode);
+      await api.joinGroup(inviteCode.trim());
       setInviteCode("");
       await loadGroups();
     } catch (err) {
@@ -101,7 +109,7 @@ export default function GroupsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <section className="bg-white rounded-lg shadow p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Create a group</h2>
-            <form onSubmit={handleCreate} className="space-y-3">
+            <form onSubmit={handleCreate} noValidate className="space-y-3">
               <input
                 type="text"
                 placeholder="e.g. Apartment 4B"
@@ -123,7 +131,7 @@ export default function GroupsPage() {
 
           <section className="bg-white rounded-lg shadow p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Join a group</h2>
-            <form onSubmit={handleJoin} className="space-y-3">
+            <form onSubmit={handleJoin} noValidate className="space-y-3">
               <input
                 type="text"
                 placeholder="Invite code"

@@ -19,6 +19,7 @@ export default function GroupDetailPage() {
     <div className="px-4 py-8">
       <div className="max-w-2xl mx-auto">
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {group === null && !error && <p className="text-sm text-gray-500">Loading…</p>}
 
         {group && (
           <div>
