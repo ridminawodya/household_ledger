@@ -6,6 +6,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
+  loginWithToken: (token: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -46,6 +47,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [persist]
   );
 
+  const loginWithToken = useCallback(
+    async (token: string) => {
+      // Stash the token first so the authenticated /auth/me request can use it.
+      localStorage.setItem("token", token);
+      try {
+        const res = await api.getMe();
+        persist(token, res.user);
+      } catch (err) {
+        localStorage.removeItem("token");
+        throw err;
+      }
+    },
+    [persist]
+  );
+
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -53,7 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: user !== null, login, signup, logout }}>
+    <AuthContext.Provider
+      value={{ user, isAuthenticated: user !== null, login, signup, loginWithToken, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

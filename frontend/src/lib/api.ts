@@ -133,6 +133,10 @@ export const api = {
   login: (email: string, password: string) =>
     request<AuthResponse>("/auth/login", { method: "POST", body: { email, password }, auth: false }),
 
+  getMe: () => request<{ user: User }>("/auth/me"),
+
+  googleLoginUrl: () => `${API_URL}/auth/google`,
+
   createGroup: (name: string) =>
     request<Group>("/groups", { method: "POST", body: { name } }).then((g) => {
       notifyGroupsChanged();
