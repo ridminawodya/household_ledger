@@ -8,6 +8,26 @@ function currentTurnAssignment(chore: Chore) {
   return chore.assignments.find((a) => a.completedAt === null) ?? null;
 }
 
+// The most recently due assignment, whether or not it's been completed —
+// used to tell "just completed" apart from "never assigned".
+function latestAssignment(chore: Chore) {
+  if (chore.assignments.length === 0) return null;
+  return [...chore.assignments].sort(
+    (a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
+  )[0];
+}
+
+const FREQUENCY_PERIOD_LABEL: Record<string, string> = {
+  daily: "today",
+  weekly: "this week",
+  biweekly: "this period",
+  monthly: "this month",
+};
+
+function periodLabel(frequency: string): string {
+  return FREQUENCY_PERIOD_LABEL[frequency] ?? "this period";
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
@@ -154,6 +174,8 @@ export default function ChoresPage() {
             <ul className="divide-y divide-gray-100">
               {chores.map((chore) => {
                 const turn = currentTurnAssignment(chore);
+                const latest = latestAssignment(chore);
+                const justCompleted = !turn && latest && latest.completedAt !== null ? latest : null;
                 return (
                   <li key={chore.id} className="py-4">
                     <div className="flex items-center justify-between">
@@ -182,6 +204,15 @@ export default function ChoresPage() {
                         >
                           {completingId === turn.id ? "Marking…" : "Mark complete"}
                         </button>
+                      </div>
+                    ) : justCompleted ? (
+                      <div className="mt-2 flex items-center gap-2 rounded-md bg-green-50 px-3 py-2">
+                        <span className="text-green-600" aria-hidden="true">✓</span>
+                        <p className="text-xs text-green-800">
+                          Done for {periodLabel(chore.frequency)} —{" "}
+                          <span className="font-medium">{justCompleted.user?.name ?? "Someone"}</span>{" "}
+                          completed it {formatDate(justCompleted.completedAt as string)}
+                        </p>
                       </div>
                     ) : (
                       <p className="mt-2 text-xs text-gray-400">Not currently assigned.</p>

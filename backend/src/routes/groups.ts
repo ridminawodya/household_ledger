@@ -132,4 +132,91 @@ router.get("/:id", async (req: AuthedRequest, res) => {
   res.json(group);
 });
 
+const monthQuerySchema = z.object({
+  month: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "month must be in YYYY-MM format"),
+});
+
+router.get("/:id/report", async (req: AuthedRequest, res) => {
+  const membership = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: req.userId!, groupId: req.params.id } },
+  });
+  if (!membership) {
+    return res.status(403).json({ error: "You are not a member of this group" });
+  }
+
+  const parsed = monthQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const group = await prisma.group.findUnique({ where: { id: req.params.id } });
+  if (!group) {
+    return res.status(404).json({ error: "Group not found" });
+  }
+
+  const [year, month] = parsed.data.month.split("-").map(Number);
+  const rangeStart = new Date(Date.UTC(year, month - 1, 1));
+  const rangeEnd = new Date(Date.UTC(year, month, 1));
+
+  const [expenses, settlements, completedChores] = await Promise.all([
+    prisma.expense.findMany({
+      where: { groupId: group.id, createdAt: { gte: rangeStart, lt: rangeEnd } },
+      include: {
+        paidBy: { select: { id: true, name: true, email: true } },
+        shares: { include: { user: { select: { id: true, name: true, email: true } } } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.settlement.findMany({
+      where: { groupId: group.id, createdAt: { gte: rangeStart, lt: rangeEnd } },
+      include: {
+        fromUser: { select: { id: true, name: true, email: true } },
+        toUser: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.choreAssignment.findMany({
+      where: {
+        chore: { groupId: group.id },
+        completedAt: { gte: rangeStart, lt: rangeEnd },
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        chore: { select: { id: true, title: true, frequency: true } },
+      },
+      orderBy: { completedAt: "asc" },
+    }),
+  ]);
+
+  res.json({
+    groupName: group.name,
+    month: parsed.data.month,
+    expenses: expenses.map((e) => ({
+      id: e.id,
+      description: e.description,
+      amountCents: e.amountCents,
+      category: e.category,
+      createdAt: e.createdAt.toISOString(),
+      paidBy: { id: e.paidBy.id, name: e.paidBy.name },
+      shares: e.shares.map((s) => ({ userId: s.userId, userName: s.user.name, amountCents: s.amountCents })),
+    })),
+    settlements: settlements.map((s) => ({
+      id: s.id,
+      amountCents: s.amountCents,
+      createdAt: s.createdAt.toISOString(),
+      fromUser: { id: s.fromUser.id, name: s.fromUser.name },
+      toUser: { id: s.toUser.id, name: s.toUser.name },
+    })),
+    completedChores: completedChores.map((c) => ({
+      id: c.id,
+      choreTitle: c.chore.title,
+      frequency: c.chore.frequency,
+      completedAt: c.completedAt!.toISOString(),
+      user: { id: c.user.id, name: c.user.name },
+    })),
+  });
+});
+
 export default router;

@@ -110,6 +110,34 @@ export interface Settlement {
   toUser: User;
 }
 
+export interface MonthlyReport {
+  groupName: string;
+  month: string;
+  expenses: {
+    id: string;
+    description: string;
+    amountCents: number;
+    category: string;
+    createdAt: string;
+    paidBy: { id: string; name: string };
+    shares: { userId: string; userName: string; amountCents: number }[];
+  }[];
+  settlements: {
+    id: string;
+    amountCents: number;
+    createdAt: string;
+    fromUser: { id: string; name: string };
+    toUser: { id: string; name: string };
+  }[];
+  completedChores: {
+    id: string;
+    choreTitle: string;
+    frequency: string;
+    completedAt: string;
+    user: { id: string; name: string };
+  }[];
+}
+
 export interface ChoreAssignment {
   id: string;
   choreId: string;
@@ -246,6 +274,9 @@ export const api = {
   listGroups: () => request<Group[]>("/groups"),
 
   getGroup: (groupId: string) => request<GroupDetail>(`/groups/${groupId}`),
+
+  getMonthlyReport: (groupId: string, month: string) =>
+    request<MonthlyReport>(`/groups/${groupId}/report?month=${month}`),
 
   createExpense: (groupId: string, description: string, amountCents: number, category: string) =>
     request<Expense>("/expenses", { method: "POST", body: { groupId, description, amountCents, category } }),
