@@ -267,7 +267,7 @@ export default function AdminDashboardPage() {
                 <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: AXIS_TEXT }} axisLine={false} tickLine={false} />
                 <Tooltip
                   labelFormatter={(v) => formatShortDate(String(v))}
-                  formatter={(value: number) => [value, "Signups"]}
+                  formatter={(value) => [Number(value), "Signups"]}
                   contentStyle={{ fontSize: 12, borderRadius: 6 }}
                 />
                 <Line type="monotone" dataKey="count" stroke={BLUE} strokeWidth={2} dot={{ r: 3 }} />
@@ -295,7 +295,7 @@ export default function AdminDashboardPage() {
                 />
                 <Tooltip
                   labelFormatter={(v) => formatShortDate(String(v))}
-                  formatter={(value: number) => [formatCents(value), "Volume"]}
+                  formatter={(value) => [formatCents(Number(value)), "Volume"]}
                   contentStyle={{ fontSize: 12, borderRadius: 6 }}
                 />
                 <Bar dataKey="totalCents" fill={ORANGE} radius={[4, 4, 0, 0]} />
@@ -317,7 +317,7 @@ export default function AdminDashboardPage() {
                 <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: AXIS_TEXT }} axisLine={false} tickLine={false} />
                 <Tooltip
                   labelFormatter={(v) => formatShortDate(String(v))}
-                  formatter={(value: number) => [value, "Completed"]}
+                  formatter={(value) => [Number(value), "Completed"]}
                   contentStyle={{ fontSize: 12, borderRadius: 6 }}
                 />
                 <Bar dataKey="count" fill={AQUA} radius={[4, 4, 0, 0]} />
@@ -348,7 +348,7 @@ export default function AdminDashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number, _name, item) => [formatCents(value), item.payload.category]}
+                      formatter={(value, _name, item) => [formatCents(Number(value)), item.payload.category]}
                       contentStyle={{ fontSize: 12, borderRadius: 6 }}
                     />
                   </PieChart>
