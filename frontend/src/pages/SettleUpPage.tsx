@@ -8,6 +8,18 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+function StatusBadge({ status }: { status: "owed" | "paid" }) {
+  const styles =
+    status === "owed"
+      ? "bg-red-50 text-red-700 border-red-200"
+      : "bg-green-50 text-green-700 border-green-200";
+  return (
+    <span className={`text-[10px] font-semibold uppercase tracking-wide border rounded-full px-2 py-0.5 shrink-0 ${styles}`}>
+      {status === "owed" ? "Owed" : "Paid"}
+    </span>
+  );
+}
+
 export default function SettleUpPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { user } = useAuth();
@@ -90,11 +102,14 @@ export default function SettleUpPage() {
                   const justPaid = justPaidKey === key;
                   return (
                     <li key={key} className="py-3 flex items-center justify-between gap-4">
-                      <p className="text-sm text-gray-900">
-                        <span className="font-medium">{memberName(t.fromUserId)}</span>{" "}
-                        owes{" "}
-                        <span className="font-medium">{memberName(t.toUserId)}</span>
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <StatusBadge status="owed" />
+                        <p className="text-sm text-gray-900 truncate">
+                          <span className="font-medium">{memberName(t.fromUserId)}</span>{" "}
+                          owes{" "}
+                          <span className="font-medium">{memberName(t.toUserId)}</span>
+                        </p>
+                      </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <p className="text-sm font-semibold text-gray-900">
                           {formatCents(t.amountCents)}
@@ -124,10 +139,13 @@ export default function SettleUpPage() {
             <ul className="divide-y divide-gray-100">
               {history.map((s) => (
                 <li key={s.id} className="py-2.5 flex items-center justify-between gap-4">
-                  <p className="text-sm text-gray-900">
-                    <span className="font-medium">{s.fromUser.name}</span> paid{" "}
-                    <span className="font-medium">{s.toUser.name}</span>
-                  </p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <StatusBadge status="paid" />
+                    <p className="text-sm text-gray-900 truncate">
+                      <span className="font-medium">{s.fromUser.name}</span> paid{" "}
+                      <span className="font-medium">{s.toUser.name}</span>
+                    </p>
+                  </div>
                   <div className="flex items-center gap-3 shrink-0 text-sm">
                     <span className="text-gray-500">{formatDate(s.createdAt)}</span>
                     <span className="font-semibold text-gray-900">{formatCents(s.amountCents)}</span>
