@@ -16,8 +16,11 @@ export default function SettleUpPage() {
   const [transactions, setTransactions] = useState<SettleTransaction[] | null>(null);
   const [history, setHistory] = useState<Settlement[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [markingKey, setMarkingKey] = useState<string | null>(null);
-  const [markError, setMarkError] = useState<string | null>(null);
+
+  const [pendingPayment, setPendingPayment] = useState<SettleTransaction | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [justPaidKey, setJustPaidKey] = useState<string | null>(null);
 
   function load() {
     if (!groupId) return;
@@ -36,18 +39,24 @@ export default function SettleUpPage() {
     return group?.members.find((m) => m.userId === userId)?.user.name ?? "Someone";
   }
 
-  async function handleMarkPaid(t: SettleTransaction) {
-    if (!groupId) return;
-    const key = `${t.fromUserId}-${t.toUserId}`;
-    setMarkError(null);
-    setMarkingKey(key);
+  function openConfirm(t: SettleTransaction) {
+    setConfirmError(null);
+    setPendingPayment(t);
+  }
+
+  async function handleConfirmPayment() {
+    if (!groupId || !pendingPayment) return;
+    setConfirming(true);
+    setConfirmError(null);
     try {
-      await api.recordSettlement(groupId, t.toUserId, t.amountCents);
+      await api.recordSettlement(groupId, pendingPayment.toUserId, pendingPayment.amountCents);
+      setJustPaidKey(`${pendingPayment.fromUserId}-${pendingPayment.toUserId}`);
+      setPendingPayment(null);
       load();
     } catch (err) {
-      setMarkError(err instanceof ApiError ? err.message : "Failed to record payment");
+      setConfirmError(err instanceof ApiError ? err.message : "Failed to record payment");
     } finally {
-      setMarkingKey(null);
+      setConfirming(false);
     }
   }
 
@@ -74,11 +83,11 @@ export default function SettleUpPage() {
               <p className="text-xs text-gray-500 mb-4">
                 The minimum number of payments needed to settle all balances in this group.
               </p>
-              {markError && <p className="text-sm text-red-600 mb-3">{markError}</p>}
               <ul className="divide-y divide-gray-100">
                 {transactions.map((t) => {
                   const key = `${t.fromUserId}-${t.toUserId}`;
-                  const canMarkPaid = t.fromUserId === user?.id;
+                  const canPay = t.fromUserId === user?.id;
+                  const justPaid = justPaidKey === key;
                   return (
                     <li key={key} className="py-3 flex items-center justify-between gap-4">
                       <p className="text-sm text-gray-900">
@@ -90,14 +99,14 @@ export default function SettleUpPage() {
                         <p className="text-sm font-semibold text-gray-900">
                           {formatCents(t.amountCents)}
                         </p>
-                        {canMarkPaid && (
+                        {canPay && (
                           <button
                             type="button"
-                            onClick={() => handleMarkPaid(t)}
-                            disabled={markingKey === key}
-                            className="text-xs font-medium text-navy-600 border border-navy-200 rounded-full px-2.5 py-1 hover:bg-navy-50 disabled:opacity-50"
+                            onClick={() => openConfirm(t)}
+                            disabled={justPaid}
+                            className="text-xs font-medium text-white bg-navy-600 rounded-full px-3 py-1.5 hover:bg-navy-500 disabled:opacity-50"
                           >
-                            {markingKey === key ? "Marking…" : "Mark as paid"}
+                            {justPaid ? "Paid ✓" : "Pay now"}
                           </button>
                         )}
                       </div>
@@ -129,6 +138,58 @@ export default function SettleUpPage() {
           </section>
         )}
       </div>
+
+      {pendingPayment && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Confirm payment</h2>
+            <p className="text-xs text-gray-500 mb-5">
+              This records that you paid {memberName(pendingPayment.toUserId)} outside the app
+              (cash, bank transfer, etc.) — it doesn't move money through Household Ledger.
+            </p>
+
+            <div className="rounded-md bg-gray-50 p-4 mb-5 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">From</span>
+                <span className="font-medium text-gray-900">{memberName(pendingPayment.fromUserId)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">To</span>
+                <span className="font-medium text-gray-900">{memberName(pendingPayment.toUserId)}</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                <span className="text-gray-500">Amount</span>
+                <span className="font-semibold text-gray-900">{formatCents(pendingPayment.amountCents)}</span>
+              </div>
+            </div>
+
+            {confirmError && <p className="text-sm text-red-600 mb-4">{confirmError}</p>}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingPayment(null)}
+                disabled={confirming}
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPayment}
+                disabled={confirming}
+                className="flex-1 rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
+              >
+                {confirming ? "Confirming…" : "Confirm payment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
