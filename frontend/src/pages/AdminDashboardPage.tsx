@@ -144,24 +144,41 @@ export default function AdminDashboardPage() {
   const [directoryLoading, setDirectoryLoading] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      api.getAdminOverview(),
-      api.getAdminTrends(),
-      api.getAdminActivity(),
-      api.getAdminTopGroups(),
-      api.getAdminTopUsers(),
-      api.getAdminExpenseCategories(),
-    ])
-      .then(([ov, tr, act, groups, users, cats]) => {
+    let cancelled = false;
+
+    function load(): Promise<void> {
+      return Promise.all([
+        api.getAdminOverview(),
+        api.getAdminTrends(),
+        api.getAdminActivity(),
+        api.getAdminTopGroups(),
+        api.getAdminTopUsers(),
+        api.getAdminExpenseCategories(),
+      ]).then(([ov, tr, act, groups, users, cats]) => {
+        if (cancelled) return;
         setOverview(ov);
         setTrends(tr);
         setActivity(act);
         setTopGroups(groups);
         setTopUsers(users);
         setCategories(cats);
+      });
+    }
+
+    // A free-tier backend instance can 502 a request while cold-starting;
+    // one retry after a short delay covers that without a manual reload.
+    load()
+      .catch(() => new Promise((resolve) => setTimeout(resolve, 1500)).then(load))
+      .catch(() => {
+        if (!cancelled) setError("Failed to load admin dashboard data");
       })
-      .catch(() => setError("Failed to load admin dashboard data"))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

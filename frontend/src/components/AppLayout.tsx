@@ -71,16 +71,18 @@ export default function AppLayout() {
                 Admin
               </Link>
             )}
-            <Link
-              to="/billing"
-              className={
-                user?.plan === "premium"
-                  ? "text-xs font-medium text-navy-700 bg-navy-50 rounded-full px-2 py-0.5 transition-colors hover:bg-navy-100"
-                  : "text-xs text-gray-600 transition-colors hover:text-gray-900"
-              }
-            >
-              {user?.plan === "premium" ? "Premium" : "Upgrade"}
-            </Link>
+            {!user?.isAdmin && (
+              <Link
+                to="/billing"
+                className={
+                  user?.plan === "premium"
+                    ? "text-xs font-medium text-navy-700 bg-navy-50 rounded-full px-2 py-0.5 transition-colors hover:bg-navy-100"
+                    : "text-xs text-gray-600 transition-colors hover:text-gray-900"
+                }
+              >
+                {user?.plan === "premium" ? "Premium" : "Upgrade"}
+              </Link>
+            )}
             <span className="text-xs text-gray-500 hidden sm:inline">{user?.name}</span>
             <button
               onClick={handleLogout}
