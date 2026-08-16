@@ -10,6 +10,12 @@ export interface ExpenseShareInput {
   amountCents: number;
 }
 
+export interface SettlementInput {
+  fromUserId: string;
+  toUserId: string;
+  amountCents: number;
+}
+
 export interface Balance {
   userId: string;
   amountCents: number;
@@ -23,7 +29,8 @@ export interface Transaction {
 
 export function computeBalances(
   expenses: ExpenseInput[],
-  shares: ExpenseShareInput[]
+  shares: ExpenseShareInput[],
+  settlements: SettlementInput[] = []
 ): Balance[] {
   const balances = new Map<string, number>();
 
@@ -36,6 +43,12 @@ export function computeBalances(
   }
   for (const share of shares) {
     add(share.userId, -share.amountCents);
+  }
+  // A recorded payment reduces what the payer owes and what the payee is owed,
+  // the same direction as an expense/share pair but with roles reversed.
+  for (const settlement of settlements) {
+    add(settlement.fromUserId, settlement.amountCents);
+    add(settlement.toUserId, -settlement.amountCents);
   }
 
   return Array.from(balances.entries())
@@ -82,7 +95,8 @@ export function simplifyDebts(balances: Balance[]): Transaction[] {
 
 export function settleGroup(
   expenses: ExpenseInput[],
-  shares: ExpenseShareInput[]
+  shares: ExpenseShareInput[],
+  settlements: SettlementInput[] = []
 ): Transaction[] {
-  return simplifyDebts(computeBalances(expenses, shares));
+  return simplifyDebts(computeBalances(expenses, shares, settlements));
 }

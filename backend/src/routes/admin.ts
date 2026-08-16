@@ -94,7 +94,7 @@ router.get("/expense-categories", async (_req, res) => {
 });
 
 router.get("/activity", async (_req, res) => {
-  const [recentExpenses, recentCompletedChores] = await Promise.all([
+  const [recentExpenses, recentCompletedChores, recentSettlements] = await Promise.all([
     prisma.expense.findMany({
       take: 20,
       orderBy: { createdAt: "desc" },
@@ -110,6 +110,15 @@ router.get("/activity", async (_req, res) => {
       include: {
         user: { select: { id: true, name: true, email: true } },
         chore: { select: { title: true, group: { select: { id: true, name: true } } } },
+      },
+    }),
+    prisma.settlement.findMany({
+      take: 20,
+      orderBy: { createdAt: "desc" },
+      include: {
+        fromUser: { select: { id: true, name: true, email: true } },
+        toUser: { select: { id: true, name: true, email: true } },
+        group: { select: { id: true, name: true } },
       },
     }),
   ]);
@@ -129,6 +138,14 @@ router.get("/activity", async (_req, res) => {
       description: c.chore.title,
       userName: c.user.name,
       groupName: c.chore.group.name,
+    })),
+    ...recentSettlements.map((s) => ({
+      type: "settlement" as const,
+      timestamp: s.createdAt.toISOString(),
+      description: `paid ${s.toUser.name}`,
+      amountCents: s.amountCents,
+      userName: s.fromUser.name,
+      groupName: s.group.name,
     })),
   ]
     .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))

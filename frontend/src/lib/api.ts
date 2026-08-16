@@ -99,6 +99,17 @@ export interface SettleTransaction {
   amountCents: number;
 }
 
+export interface Settlement {
+  id: string;
+  groupId: string;
+  fromUserId: string;
+  toUserId: string;
+  amountCents: number;
+  createdAt: string;
+  fromUser: User;
+  toUser: User;
+}
+
 export interface ChoreAssignment {
   id: string;
   choreId: string;
@@ -181,7 +192,7 @@ export interface AdminGroupsPage {
 }
 
 export interface AdminActivityItem {
-  type: "expense" | "chore";
+  type: "expense" | "chore" | "settlement";
   timestamp: string;
   description: string;
   amountCents?: number;
@@ -242,6 +253,11 @@ export const api = {
   listExpenses: (groupId: string) => request<Expense[]>(`/expenses/group/${groupId}`),
 
   getSettleUp: (groupId: string) => request<SettleTransaction[]>(`/expenses/group/${groupId}/settle`),
+
+  recordSettlement: (groupId: string, toUserId: string, amountCents: number) =>
+    request<Settlement>("/expenses/settlements", { method: "POST", body: { groupId, toUserId, amountCents } }),
+
+  listSettlements: (groupId: string) => request<Settlement[]>(`/expenses/group/${groupId}/settlements`),
 
   createChore: (groupId: string, title: string, frequency: string) =>
     request<Chore>("/chores", { method: "POST", body: { groupId, title, frequency } }),

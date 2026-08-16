@@ -453,22 +453,33 @@ export default function AdminDashboardPage() {
                 <li key={i} className="py-2.5 flex items-center gap-3">
                   <span
                     className="h-2 w-2 rounded-full shrink-0"
-                    style={{ backgroundColor: item.type === "expense" ? ORANGE : AQUA }}
+                    style={{
+                      backgroundColor:
+                        item.type === "expense" ? ORANGE : item.type === "settlement" ? GREEN : AQUA,
+                    }}
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1 flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <p className="text-sm text-gray-900 truncate">
                         <span className="font-medium">{item.userName}</span>{" "}
-                        {item.type === "expense" ? "logged an expense" : "completed a chore"}
-                        {" — "}
-                        {item.description}
+                        {item.type === "expense"
+                          ? "logged an expense"
+                          : item.type === "settlement"
+                            ? item.description
+                            : "completed a chore"}
+                        {item.type !== "settlement" && (
+                          <>
+                            {" — "}
+                            {item.description}
+                          </>
+                        )}
                       </p>
                       <p className="text-xs text-gray-500">
                         {item.groupName} · {formatTimestamp(item.timestamp)}
                       </p>
                     </div>
-                    {item.type === "expense" && item.amountCents !== undefined && (
+                    {item.amountCents !== undefined && (
                       <span className="shrink-0 text-sm font-medium text-gray-900">
                         {formatCents(item.amountCents)}
                       </span>

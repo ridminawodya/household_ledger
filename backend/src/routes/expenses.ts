@@ -93,9 +93,67 @@ router.get("/group/:groupId/settle", async (req: AuthedRequest, res) => {
     where: { expense: { groupId: req.params.groupId } },
     select: { expenseId: true, userId: true, amountCents: true },
   });
+  const settlements = await prisma.settlement.findMany({
+    where: { groupId: req.params.groupId },
+    select: { fromUserId: true, toUserId: true, amountCents: true },
+  });
 
-  const transactions = settleGroup(expenses, shares);
+  const transactions = settleGroup(expenses, shares, settlements);
   res.json(transactions);
+});
+
+const recordSettlementSchema = z.object({
+  groupId: z.string().min(1),
+  toUserId: z.string().min(1),
+  amountCents: z.number().int().positive("Amount must be a positive integer number of cents"),
+});
+
+router.post("/settlements", async (req: AuthedRequest, res) => {
+  const parsed = recordSettlementSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  const { groupId, toUserId, amountCents } = parsed.data;
+
+  const membership = await assertMember(groupId, req.userId!);
+  if (!membership) {
+    return res.status(403).json({ error: "You are not a member of this group" });
+  }
+  const payeeMembership = await assertMember(groupId, toUserId);
+  if (!payeeMembership) {
+    return res.status(400).json({ error: "Recipient is not a member of this group" });
+  }
+  if (toUserId === req.userId) {
+    return res.status(400).json({ error: "You cannot record a payment to yourself" });
+  }
+
+  const settlement = await prisma.settlement.create({
+    data: { groupId, fromUserId: req.userId!, toUserId, amountCents },
+    include: {
+      fromUser: { select: { id: true, name: true, email: true } },
+      toUser: { select: { id: true, name: true, email: true } },
+    },
+  });
+
+  res.status(201).json(settlement);
+});
+
+router.get("/group/:groupId/settlements", async (req: AuthedRequest, res) => {
+  const membership = await assertMember(req.params.groupId, req.userId!);
+  if (!membership) {
+    return res.status(403).json({ error: "You are not a member of this group" });
+  }
+
+  const settlements = await prisma.settlement.findMany({
+    where: { groupId: req.params.groupId },
+    include: {
+      fromUser: { select: { id: true, name: true, email: true } },
+      toUser: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.json(settlements);
 });
 
 export default router;

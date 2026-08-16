@@ -22,6 +22,8 @@ model User {
   expenseShares     ExpenseShare[]
   choreAssignments  ChoreAssignment[]
   groupsCreated     Group[]          @relation("GroupCreatedBy")
+  settlementsPaid   Settlement[]     @relation("SettlementFrom")
+  settlementsRecv   Settlement[]     @relation("SettlementTo")
 }
 
 model Group {
@@ -31,10 +33,11 @@ model Group {
   createdAt   DateTime @default(now())
   createdById String?
 
-  createdBy User?         @relation("GroupCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  members   GroupMember[]
-  expenses  Expense[]
-  chores    Chore[]
+  createdBy   User?         @relation("GroupCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  members     GroupMember[]
+  expenses    Expense[]
+  chores      Chore[]
+  settlements Settlement[]
 }
 
 model GroupMember {
@@ -73,6 +76,19 @@ model ExpenseShare {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([expenseId, userId])
+}
+
+model Settlement {
+  id          String   @id @default(uuid())
+  groupId     String
+  fromUserId  String
+  toUserId    String
+  amountCents Int
+  createdAt   DateTime @default(now())
+
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser User  @relation("SettlementFrom", fields: [fromUserId], references: [id])
+  toUser   User  @relation("SettlementTo", fields: [toUserId], references: [id])
 }
 
 model Chore {
