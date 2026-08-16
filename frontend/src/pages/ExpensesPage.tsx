@@ -5,12 +5,23 @@ import { centsToDollarsInput, dollarsToCents, formatCents } from "../lib/money";
 
 const CATEGORIES = ["groceries", "food", "utilities", "rent", "transport", "other"];
 
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function ExpensesPage() {
   const { groupId } = useParams<{ groupId: string }>();
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
 
   // Manual add form
   const [description, setDescription] = useState("");
@@ -268,20 +279,89 @@ export default function ExpensesPage() {
           {expenses !== null && expenses.length > 0 && (
             <ul className="divide-y divide-gray-100">
               {expenses.map((expense) => (
-                <li key={expense.id} className="py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{expense.description}</p>
+                <li key={expense.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{expense.description}</p>
                     <p className="text-xs text-gray-500">
                       {expense.category} · paid by {expense.paidBy?.name ?? memberName(expense.paidById)}
                     </p>
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{formatCents(expense.amountCents)}</p>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <p className="text-sm font-semibold text-gray-900">{formatCents(expense.amountCents)}</p>
+                    <button
+                      type="button"
+                      onClick={() => setViewingExpense(expense)}
+                      className="text-xs font-medium text-navy-600 border border-navy-200 rounded-full px-2.5 py-1 hover:bg-navy-50"
+                    >
+                      View
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </section>
       </div>
+
+      {viewingExpense && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">{viewingExpense.description}</h2>
+                <p className="text-xs text-gray-500">{formatDateTime(viewingExpense.createdAt)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingExpense(null)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="rounded-md bg-gray-50 p-4 mb-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Category</span>
+                <span className="font-medium text-gray-900 capitalize">{viewingExpense.category}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Paid by</span>
+                <span className="font-medium text-gray-900">
+                  {viewingExpense.paidBy?.name ?? memberName(viewingExpense.paidById)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                <span className="text-gray-500">Total</span>
+                <span className="font-semibold text-gray-900">{formatCents(viewingExpense.amountCents)}</span>
+              </div>
+            </div>
+
+            <h3 className="text-xs font-semibold text-gray-700 mb-2">Split</h3>
+            <ul className="divide-y divide-gray-100">
+              {viewingExpense.shares.map((share) => (
+                <li key={share.id} className="py-1.5 flex justify-between text-sm">
+                  <span className="text-gray-700">{memberName(share.userId)}</span>
+                  <span className="text-gray-900">{formatCents(share.amountCents)}</span>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              type="button"
+              onClick={() => setViewingExpense(null)}
+              className="mt-5 w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
