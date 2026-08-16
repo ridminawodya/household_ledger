@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api, ApiError, type Chore, type GroupDetail } from "../lib/api";
 
 const FREQUENCIES = ["daily", "weekly", "biweekly", "monthly"];
+const AUTO_ROTATE_FREQUENCIES = new Set(["weekly", "biweekly", "monthly"]);
 
 function currentTurnAssignment(chore: Chore) {
   return chore.assignments.find((a) => a.completedAt === null) ?? null;
@@ -41,8 +42,10 @@ export default function ChoresPage() {
 
   const [title, setTitle] = useState("");
   const [frequency, setFrequency] = useState(FREQUENCIES[0]);
+  const [autoRotate, setAutoRotate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const [assigningChoreId, setAssigningChoreId] = useState<string | null>(null);
   const [assignUserId, setAssignUserId] = useState("");
@@ -74,14 +77,27 @@ export default function ChoresPage() {
     setCreateError(null);
     setCreating(true);
     try {
-      await api.createChore(groupId, title, frequency);
+      await api.createChore(groupId, title, frequency, autoRotate && AUTO_ROTATE_FREQUENCIES.has(frequency));
       setTitle("");
       setFrequency(FREQUENCIES[0]);
+      setAutoRotate(false);
       await loadAll();
     } catch (err) {
       setCreateError(err instanceof ApiError ? err.message : "Failed to create chore");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleToggleAutoRotate(choreId: string, next: boolean) {
+    setTogglingId(choreId);
+    try {
+      await api.updateChoreAutoRotate(choreId, next);
+      await loadAll();
+    } catch {
+      // reload will reflect the true server state either way
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -151,6 +167,21 @@ export default function ChoresPage() {
                 </option>
               ))}
             </select>
+            <label
+              className={`flex items-center gap-2 text-xs ${
+                AUTO_ROTATE_FREQUENCIES.has(frequency) ? "text-gray-700" : "text-gray-400"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={autoRotate}
+                disabled={!AUTO_ROTATE_FREQUENCIES.has(frequency)}
+                onChange={(e) => setAutoRotate(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              Auto-assign to the next person each cycle
+              {!AUTO_ROTATE_FREQUENCIES.has(frequency) && " (not available for daily chores)"}
+            </label>
             {createError && <p className="text-sm text-red-600">{createError}</p>}
             <button
               type="submit"
@@ -180,15 +211,40 @@ export default function ChoresPage() {
                   <li key={chore.id} className="py-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{chore.title}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {chore.title}
+                          {chore.autoRotate && (
+                            <span
+                              className="ml-1.5 text-[10px] font-medium text-navy-700 bg-navy-50 rounded-full px-1.5 py-0.5 align-middle"
+                              title="Auto-assigns to the next person each cycle"
+                            >
+                              ↻ auto
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-gray-500">{chore.frequency}</p>
                       </div>
-                      <button
-                        onClick={() => openAssignForm(chore.id)}
-                        className="text-xs text-navy-600 hover:underline"
-                      >
-                        Assign
-                      </button>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {AUTO_ROTATE_FREQUENCIES.has(chore.frequency) && (
+                          <button
+                            onClick={() => handleToggleAutoRotate(chore.id, !chore.autoRotate)}
+                            disabled={togglingId === chore.id}
+                            className="text-xs text-gray-500 hover:text-navy-600 disabled:opacity-50"
+                          >
+                            {togglingId === chore.id
+                              ? "…"
+                              : chore.autoRotate
+                                ? "Turn off auto-assign"
+                                : "Turn on auto-assign"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openAssignForm(chore.id)}
+                          className="text-xs text-navy-600 hover:underline"
+                        >
+                          Assign
+                        </button>
+                      </div>
                     </div>
 
                     {turn ? (

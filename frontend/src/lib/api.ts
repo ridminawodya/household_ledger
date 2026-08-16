@@ -42,6 +42,24 @@ async function request<T>(
   return data as T;
 }
 
+async function uploadFile<T>(path: string, fieldName: string, file: File): Promise<T> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const body = new FormData();
+  body.append(fieldName, file);
+
+  const res = await fetch(`${API_URL}${path}`, { method: "POST", headers, body });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new ApiError(res.status, data.error ?? "Something went wrong", data.code);
+  }
+
+  return data as T;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -81,6 +99,8 @@ export interface ExpenseShare {
   amountCents: number;
 }
 
+export type RecurrenceFrequency = "weekly" | "biweekly" | "monthly";
+
 export interface Expense {
   id: string;
   groupId: string;
@@ -89,6 +109,10 @@ export interface Expense {
   amountCents: number;
   category: string;
   createdAt: string;
+  updatedAt: string;
+  receiptUrl: string | null;
+  recurrenceFrequency: RecurrenceFrequency | null;
+  recurrenceSourceId: string | null;
   shares: ExpenseShare[];
   paidBy?: User;
 }
@@ -153,6 +177,7 @@ export interface Chore {
   groupId: string;
   title: string;
   frequency: string;
+  autoRotate: boolean;
   createdAt: string;
   assignments: ChoreAssignment[];
 }
@@ -278,8 +303,27 @@ export const api = {
   getMonthlyReport: (groupId: string, month: string) =>
     request<MonthlyReport>(`/groups/${groupId}/report?month=${month}`),
 
-  createExpense: (groupId: string, description: string, amountCents: number, category: string) =>
-    request<Expense>("/expenses", { method: "POST", body: { groupId, description, amountCents, category } }),
+  createExpense: (
+    groupId: string,
+    description: string,
+    amountCents: number,
+    category: string,
+    recurrenceFrequency?: RecurrenceFrequency
+  ) =>
+    request<Expense>("/expenses", {
+      method: "POST",
+      body: { groupId, description, amountCents, category, recurrenceFrequency },
+    }),
+
+  updateExpense: (
+    id: string,
+    updates: Partial<{ description: string; amountCents: number; category: string }>
+  ) => request<Expense>(`/expenses/${id}`, { method: "PATCH", body: updates }),
+
+  deleteExpense: (id: string) => request<void>(`/expenses/${id}`, { method: "DELETE" }),
+
+  uploadReceipt: (expenseId: string, file: File) =>
+    uploadFile<Expense>(`/expenses/${expenseId}/receipt`, "receipt", file),
 
   listExpenses: (groupId: string) => request<Expense[]>(`/expenses/group/${groupId}`),
 
@@ -290,8 +334,11 @@ export const api = {
 
   listSettlements: (groupId: string) => request<Settlement[]>(`/expenses/group/${groupId}/settlements`),
 
-  createChore: (groupId: string, title: string, frequency: string) =>
-    request<Chore>("/chores", { method: "POST", body: { groupId, title, frequency } }),
+  createChore: (groupId: string, title: string, frequency: string, autoRotate?: boolean) =>
+    request<Chore>("/chores", { method: "POST", body: { groupId, title, frequency, autoRotate } }),
+
+  updateChoreAutoRotate: (choreId: string, autoRotate: boolean) =>
+    request<Chore>(`/chores/${choreId}`, { method: "PATCH", body: { autoRotate } }),
 
   listChores: (groupId: string) => request<Chore[]>(`/chores/group/${groupId}`),
 

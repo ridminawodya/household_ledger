@@ -1,9 +1,23 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, ApiError, type Expense, type GroupDetail, type ParsedExpense } from "../lib/api";
+import { useAuth } from "../lib/AuthContext";
+import {
+  api,
+  ApiError,
+  type Expense,
+  type GroupDetail,
+  type ParsedExpense,
+  type RecurrenceFrequency,
+} from "../lib/api";
 import { centsToDollarsInput, dollarsToCents, formatCents } from "../lib/money";
 
 const CATEGORIES = ["groceries", "food", "utilities", "rent", "transport", "other"];
+const RECURRENCE_OPTIONS: { value: RecurrenceFrequency | ""; label: string }[] = [
+  { value: "", label: "Doesn't repeat" },
+  { value: "weekly", label: "Repeats weekly" },
+  { value: "biweekly", label: "Repeats every 2 weeks" },
+  { value: "monthly", label: "Repeats monthly" },
+];
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -17,6 +31,7 @@ function formatDateTime(iso: string): string {
 
 export default function ExpensesPage() {
   const { groupId } = useParams<{ groupId: string }>();
+  const { user } = useAuth();
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
@@ -27,6 +42,7 @@ export default function ExpensesPage() {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const [recurrence, setRecurrence] = useState<RecurrenceFrequency | "">("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -44,6 +60,7 @@ export default function ExpensesPage() {
       const [g, e] = await Promise.all([api.getGroup(groupId), api.listExpenses(groupId)]);
       setGroup(g);
       setExpenses(e);
+      setViewingExpense((prev) => (prev ? e.find((x) => x.id === prev.id) ?? null : null));
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Failed to load expenses");
     }
@@ -71,10 +88,11 @@ export default function ExpensesPage() {
 
     setAdding(true);
     try {
-      await api.createExpense(groupId, description, cents, category);
+      await api.createExpense(groupId, description, cents, category, recurrence || undefined);
       setDescription("");
       setAmount("");
       setCategory(CATEGORIES[0]);
+      setRecurrence("");
       await loadAll();
     } catch (err) {
       setAddError(err instanceof ApiError ? err.message : "Failed to add expense");
@@ -258,6 +276,17 @@ export default function ExpensesPage() {
                 ))}
               </select>
             </div>
+            <select
+              value={recurrence}
+              onChange={(e) => setRecurrence(e.target.value as RecurrenceFrequency | "")}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+            >
+              {RECURRENCE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
             {addError && <p className="text-sm text-red-600">{addError}</p>}
             <button
               type="submit"
@@ -281,7 +310,17 @@ export default function ExpensesPage() {
               {expenses.map((expense) => (
                 <li key={expense.id} className="py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{expense.description}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {expense.description}
+                      {expense.recurrenceFrequency && (
+                        <span
+                          className="ml-1.5 text-[10px] font-medium text-navy-700 bg-navy-50 rounded-full px-1.5 py-0.5 align-middle"
+                          title={`Repeats ${expense.recurrenceFrequency}`}
+                        >
+                          ↻
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-gray-500">
                       {expense.category} · paid by {expense.paidBy?.name ?? memberName(expense.paidById)}
                     </p>
@@ -304,23 +343,113 @@ export default function ExpensesPage() {
       </div>
 
       {viewingExpense && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6">
+        <ExpenseDetailModal
+          expense={viewingExpense}
+          memberName={memberName}
+          canManage={viewingExpense.paidById === user?.id}
+          onClose={() => setViewingExpense(null)}
+          onChanged={loadAll}
+        />
+      )}
+    </div>
+  );
+}
+
+function ExpenseDetailModal({
+  expense,
+  memberName,
+  canManage,
+  onClose,
+  onChanged,
+}: {
+  expense: Expense;
+  memberName: (userId: string) => string;
+  canManage: boolean;
+  onClose: () => void;
+  onChanged: () => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editDescription, setEditDescription] = useState(expense.description);
+  const [editAmount, setEditAmount] = useState(centsToDollarsInput(expense.amountCents));
+  const [editCategory, setEditCategory] = useState(expense.category);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function startEdit() {
+    setEditDescription(expense.description);
+    setEditAmount(centsToDollarsInput(expense.amountCents));
+    setEditCategory(expense.category);
+    setActionError(null);
+    setEditing(true);
+  }
+
+  async function handleSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    const cents = dollarsToCents(editAmount);
+    if (cents === null) {
+      setActionError("Enter a valid positive amount");
+      return;
+    }
+    setSaving(true);
+    setActionError(null);
+    try {
+      await api.updateExpense(expense.id, {
+        description: editDescription,
+        amountCents: cents,
+        category: editCategory,
+      });
+      setEditing(false);
+      await onChanged();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Failed to update expense");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    setActionError(null);
+    try {
+      await api.deleteExpense(expense.id);
+      onClose();
+      await onChanged();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Failed to delete expense");
+      setDeleting(false);
+    }
+  }
+
+  async function handleReceiptSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingReceipt(true);
+    setActionError(null);
+    try {
+      await api.uploadReceipt(expense.id, file);
+      await onChanged();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Failed to upload receipt");
+    } finally {
+      setUploadingReceipt(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true">
+      <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6 max-h-[90vh] overflow-y-auto">
+        {!editing ? (
+          <>
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <h2 className="text-base font-semibold text-gray-900">{viewingExpense.description}</h2>
-                <p className="text-xs text-gray-500">{formatDateTime(viewingExpense.createdAt)}</p>
+                <h2 className="text-base font-semibold text-gray-900">{expense.description}</h2>
+                <p className="text-xs text-gray-500">{formatDateTime(expense.createdAt)}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setViewingExpense(null)}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label="Close"
-              >
+              <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
                 ✕
               </button>
             </div>
@@ -328,23 +457,29 @@ export default function ExpensesPage() {
             <div className="rounded-md bg-gray-50 p-4 mb-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Category</span>
-                <span className="font-medium text-gray-900 capitalize">{viewingExpense.category}</span>
+                <span className="font-medium text-gray-900 capitalize">{expense.category}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Paid by</span>
                 <span className="font-medium text-gray-900">
-                  {viewingExpense.paidBy?.name ?? memberName(viewingExpense.paidById)}
+                  {expense.paidBy?.name ?? memberName(expense.paidById)}
                 </span>
               </div>
+              {expense.recurrenceFrequency && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Repeats</span>
+                  <span className="font-medium text-gray-900 capitalize">{expense.recurrenceFrequency}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
                 <span className="text-gray-500">Total</span>
-                <span className="font-semibold text-gray-900">{formatCents(viewingExpense.amountCents)}</span>
+                <span className="font-semibold text-gray-900">{formatCents(expense.amountCents)}</span>
               </div>
             </div>
 
             <h3 className="text-xs font-semibold text-gray-700 mb-2">Split</h3>
-            <ul className="divide-y divide-gray-100">
-              {viewingExpense.shares.map((share) => (
+            <ul className="divide-y divide-gray-100 mb-4">
+              {expense.shares.map((share) => (
                 <li key={share.id} className="py-1.5 flex justify-between text-sm">
                   <span className="text-gray-700">{memberName(share.userId)}</span>
                   <span className="text-gray-900">{formatCents(share.amountCents)}</span>
@@ -352,16 +487,118 @@ export default function ExpensesPage() {
               ))}
             </ul>
 
+            <h3 className="text-xs font-semibold text-gray-700 mb-2">Receipt</h3>
+            {expense.receiptUrl ? (
+              <a href={expense.receiptUrl} target="_blank" rel="noreferrer" className="block mb-4">
+                <img
+                  src={expense.receiptUrl}
+                  alt="Receipt"
+                  className="w-full rounded-md border border-gray-200 max-h-48 object-cover"
+                />
+              </a>
+            ) : (
+              <p className="text-xs text-gray-400 mb-3">No receipt attached.</p>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleReceiptSelected}
+              className="hidden"
+              id="receipt-input"
+            />
             <button
               type="button"
-              onClick={() => setViewingExpense(null)}
-              className="mt-5 w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingReceipt}
+              className="w-full mb-4 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {uploadingReceipt ? "Uploading…" : expense.receiptUrl ? "Replace receipt" : "Add receipt photo"}
+            </button>
+
+            {actionError && <p className="text-sm text-red-600 mb-3">{actionError}</p>}
+
+            {canManage && (
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={startEdit}
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                >
+                  {deleting ? "Deleting…" : "Delete"}
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Close
             </button>
-          </div>
-        </div>
-      )}
+          </>
+        ) : (
+          <form onSubmit={handleSaveEdit} className="space-y-3">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Edit expense</h2>
+            <input
+              type="text"
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              required
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+                required
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                disabled={saving}
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

@@ -53,17 +53,30 @@ model GroupMember {
 }
 
 model Expense {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   groupId     String
   paidById    String
   description String
   amountCents Int
   category    String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  receiptUrl  String?
 
-  group   Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  paidBy  User           @relation("ExpensePaidBy", fields: [paidById], references: [id])
-  shares  ExpenseShare[]
+  // Recurrence: a non-null recurrenceFrequency marks this expense as the
+  // template for a recurring series. nextOccurrenceAt is checked lazily
+  // (on read) rather than via a background job, since the free-tier host
+  // has no reliable always-on scheduler.
+  recurrenceFrequency String?
+  nextOccurrenceAt    DateTime?
+  recurrenceSourceId  String?
+
+  group             Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy            User           @relation("ExpensePaidBy", fields: [paidById], references: [id])
+  shares            ExpenseShare[]
+  recurrenceSource  Expense?       @relation("ExpenseRecurrence", fields: [recurrenceSourceId], references: [id], onDelete: SetNull)
+  recurrenceInstances Expense[]    @relation("ExpenseRecurrence")
 }
 
 model ExpenseShare {
@@ -96,6 +109,7 @@ model Chore {
   groupId   String
   title     String
   frequency String
+  autoRotate Boolean @default(false)
   createdAt DateTime @default(now())
 
   group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
