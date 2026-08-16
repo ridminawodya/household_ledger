@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth";
+import { FREE_GROUP_LIMIT, FREE_MEMBER_LIMIT, isPremiumPlan } from "../lib/plans";
 
 const router = Router();
 router.use(requireAuth);
@@ -21,6 +22,21 @@ router.post("/", async (req: AuthedRequest, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
+  const user = await prisma.user.findUnique({ where: { id: req.userId! } });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  if (!isPremiumPlan(user.plan)) {
+    const groupCount = await prisma.groupMember.count({ where: { userId: req.userId! } });
+    if (groupCount >= FREE_GROUP_LIMIT) {
+      return res.status(403).json({
+        error: `Free plan is limited to ${FREE_GROUP_LIMIT} group. Upgrade to premium to create more.`,
+        code: "PLAN_LIMIT_GROUPS",
+      });
+    }
+  }
+
   let inviteCode = generateInviteCode();
   for (let attempts = 0; attempts < 5; attempts++) {
     const existing = await prisma.group.findUnique({ where: { inviteCode } });
@@ -32,6 +48,7 @@ router.post("/", async (req: AuthedRequest, res) => {
     data: {
       name: parsed.data.name,
       inviteCode,
+      createdById: req.userId!,
       members: {
         create: { userId: req.userId! },
       },
@@ -54,6 +71,7 @@ router.post("/join", async (req: AuthedRequest, res) => {
 
   const group = await prisma.group.findUnique({
     where: { inviteCode: parsed.data.inviteCode.toUpperCase() },
+    include: { createdBy: true, _count: { select: { members: true } } },
   });
   if (!group) {
     return res.status(404).json({ error: "No group found with that invite code" });
@@ -64,6 +82,14 @@ router.post("/join", async (req: AuthedRequest, res) => {
   });
   if (existingMembership) {
     return res.status(409).json({ error: "You are already a member of this group" });
+  }
+
+  const creatorIsPremium = group.createdBy ? isPremiumPlan(group.createdBy.plan) : false;
+  if (!creatorIsPremium && group._count.members >= FREE_MEMBER_LIMIT) {
+    return res.status(403).json({
+      error: `This group has reached the ${FREE_MEMBER_LIMIT}-member limit on the free plan.`,
+      code: "PLAN_LIMIT_MEMBERS",
+    });
   }
 
   await prisma.groupMember.create({

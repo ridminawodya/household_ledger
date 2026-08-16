@@ -2,9 +2,11 @@ const API_URL = import.meta.env.VITE_API_URL as string;
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -34,7 +36,7 @@ async function request<T>(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new ApiError(res.status, data.error ?? "Something went wrong");
+    throw new ApiError(res.status, data.error ?? "Something went wrong", data.code);
   }
 
   return data as T;
@@ -44,6 +46,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  isAdmin: boolean;
+  plan: "free" | "premium";
 }
 
 export interface AuthResponse {
@@ -120,6 +124,85 @@ export interface ParsedExpense {
   category: string;
 }
 
+export interface AdminOverview {
+  userCount: number;
+  groupCount: number;
+  choreCount: number;
+  choreCompletedCount: number;
+  newUsersLast7Days: number;
+  expenseCount: number;
+  expenseTotalCents: number;
+  premiumUserCount: number;
+}
+
+export interface AdminTrends {
+  signups: { date: string; count: number }[];
+  expenses: { date: string; totalCents: number }[];
+  choresCompleted: { date: string; count: number }[];
+}
+
+export interface AdminExpenseCategory {
+  category: string;
+  expenseCount: number;
+  totalCents: number;
+}
+
+export interface AdminUserRow {
+  id: string;
+  name: string;
+  email: string;
+  plan: "free" | "premium";
+  createdAt: string;
+  authMethod: "google" | "password";
+  groupCount: number;
+}
+
+export interface AdminGroupRow {
+  id: string;
+  name: string;
+  createdAt: string;
+  memberCount: number;
+  expenseCount: number;
+  choreCount: number;
+}
+
+export interface AdminUsersPage {
+  users: AdminUserRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface AdminGroupsPage {
+  groups: AdminGroupRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface AdminActivityItem {
+  type: "expense" | "chore";
+  timestamp: string;
+  description: string;
+  amountCents?: number;
+  userName: string;
+  groupName: string;
+}
+
+export interface AdminTopGroup {
+  groupId: string;
+  groupName: string;
+  expenseCount: number;
+  totalCents: number;
+}
+
+export interface AdminTopUser {
+  userId: string;
+  userName: string;
+  expenseCount: number;
+  totalCents: number;
+}
+
 export const GROUPS_CHANGED_EVENT = "household-ledger:groups-changed";
 
 function notifyGroupsChanged() {
@@ -173,4 +256,22 @@ export const api = {
 
   parseExpense: (groupId: string, text: string) =>
     request<ParsedExpense>("/ai/parse-expense", { method: "POST", body: { groupId, text } }),
+
+  getAdminOverview: () => request<AdminOverview>("/admin/overview"),
+
+  getAdminTrends: () => request<AdminTrends>("/admin/trends"),
+
+  getAdminActivity: () => request<AdminActivityItem[]>("/admin/activity"),
+
+  getAdminTopGroups: () => request<AdminTopGroup[]>("/admin/top-groups"),
+
+  getAdminTopUsers: () => request<AdminTopUser[]>("/admin/top-users"),
+
+  getAdminExpenseCategories: () => request<AdminExpenseCategory[]>("/admin/expense-categories"),
+
+  getAdminUsers: (page = 1) => request<AdminUsersPage>(`/admin/users?page=${page}`),
+
+  getAdminGroups: (page = 1) => request<AdminGroupsPage>(`/admin/groups?page=${page}`),
+
+  createCheckout: () => request<{ url: string }>("/billing/checkout", { method: "POST" }),
 };

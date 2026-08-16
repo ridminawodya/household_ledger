@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api, ApiError, type Expense, type GroupDetail, type ParsedExpense } from "../lib/api";
 import { centsToDollarsInput, dollarsToCents, formatCents } from "../lib/money";
 
@@ -23,6 +23,7 @@ export default function ExpensesPage() {
   const [aiText, setAiText] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiIsPlanLimit, setAiIsPlanLimit] = useState(false);
   const [aiResult, setAiResult] = useState<ParsedExpense | null>(null);
   const [aiSaving, setAiSaving] = useState(false);
 
@@ -75,6 +76,7 @@ export default function ExpensesPage() {
     e.preventDefault();
     if (!groupId) return;
     setAiError(null);
+    setAiIsPlanLimit(false);
     setAiResult(null);
     setAiLoading(true);
     try {
@@ -82,6 +84,7 @@ export default function ExpensesPage() {
       setAiResult(parsed);
     } catch (err) {
       setAiError(err instanceof ApiError ? err.message : "Failed to parse expense");
+      setAiIsPlanLimit(err instanceof ApiError && err.code === "PLAN_LIMIT_AI");
     } finally {
       setAiLoading(false);
     }
@@ -127,7 +130,19 @@ export default function ExpensesPage() {
               required
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
             />
-            {aiError && <p className="text-sm text-red-600">{aiError}</p>}
+            {aiError && (
+              <p className="text-sm text-red-600">
+                {aiError}
+                {aiIsPlanLimit && (
+                  <>
+                    {" "}
+                    <Link to="/billing" className="underline hover:no-underline">
+                      Upgrade
+                    </Link>
+                  </>
+                )}
+              </p>
+            )}
             <button
               type="submit"
               disabled={aiLoading}

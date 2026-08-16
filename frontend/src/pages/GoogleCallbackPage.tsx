@@ -20,7 +20,7 @@ export default function GoogleCallbackPage() {
     }
 
     loginWithToken(token)
-      .then(() => navigate("/groups", { replace: true }))
+      .then((user) => navigate(user.isAdmin ? "/admin" : "/groups", { replace: true }))
       .catch(() => setError("Failed to complete Google sign-in."));
   }, [searchParams, loginWithToken, navigate]);
 

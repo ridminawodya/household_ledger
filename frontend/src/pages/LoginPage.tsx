@@ -21,8 +21,8 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await login(email, password);
-      navigate("/groups");
+      const user = await login(email, password);
+      navigate(user.isAdmin ? "/admin" : "/groups");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to log in");
       setShake((s) => s + 1);

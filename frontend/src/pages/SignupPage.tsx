@@ -21,8 +21,8 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
     try {
-      await signup(email, password, name);
-      navigate("/groups");
+      const user = await signup(email, password, name);
+      navigate(user.isAdmin ? "/admin" : "/groups");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to sign up");
       setShake((s) => s + 1);

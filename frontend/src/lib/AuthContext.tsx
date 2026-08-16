@@ -4,10 +4,11 @@ import { api, type User } from "./api";
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
-  loginWithToken: (token: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  signup: (email: string, password: string, name: string) => Promise<User>;
+  loginWithToken: (token: string) => Promise<User>;
   logout: () => void;
+  refreshUser: () => Promise<User>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       const res = await api.login(email, password);
       persist(res.token, res.user);
+      return res.user;
     },
     [persist]
   );
@@ -43,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string, name: string) => {
       const res = await api.signup(email, password, name);
       persist(res.token, res.user);
+      return res.user;
     },
     [persist]
   );
@@ -54,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const res = await api.getMe();
         persist(token, res.user);
+        return res.user;
       } catch (err) {
         localStorage.removeItem("token");
         throw err;
@@ -68,9 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const res = await api.getMe();
+    localStorage.setItem("user", JSON.stringify(res.user));
+    setUser(res.user);
+    return res.user;
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: user !== null, login, signup, loginWithToken, logout }}
+      value={{ user, isAuthenticated: user !== null, login, signup, loginWithToken, logout, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

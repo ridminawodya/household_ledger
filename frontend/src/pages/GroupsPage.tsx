@@ -11,10 +11,12 @@ export default function GroupsPage() {
   const [groupName, setGroupName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createIsPlanLimit, setCreateIsPlanLimit] = useState(false);
 
   const [inviteCode, setInviteCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinIsPlanLimit, setJoinIsPlanLimit] = useState(false);
 
   async function loadGroups() {
     try {
@@ -32,6 +34,7 @@ export default function GroupsPage() {
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     setCreateError(null);
+    setCreateIsPlanLimit(false);
     if (!groupName.trim()) {
       setCreateError("Enter a group name");
       return;
@@ -43,6 +46,7 @@ export default function GroupsPage() {
       await loadGroups();
     } catch (err) {
       setCreateError(err instanceof ApiError ? err.message : "Failed to create group");
+      setCreateIsPlanLimit(err instanceof ApiError && err.code === "PLAN_LIMIT_GROUPS");
     } finally {
       setCreating(false);
     }
@@ -51,6 +55,7 @@ export default function GroupsPage() {
   async function handleJoin(e: FormEvent) {
     e.preventDefault();
     setJoinError(null);
+    setJoinIsPlanLimit(false);
     if (!inviteCode.trim()) {
       setJoinError("Enter an invite code");
       return;
@@ -62,6 +67,7 @@ export default function GroupsPage() {
       await loadGroups();
     } catch (err) {
       setJoinError(err instanceof ApiError ? err.message : "Failed to join group");
+      setJoinIsPlanLimit(err instanceof ApiError && err.code === "PLAN_LIMIT_MEMBERS");
     } finally {
       setJoining(false);
     }
@@ -118,7 +124,19 @@ export default function GroupsPage() {
                 onChange={(e) => setGroupName(e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
               />
-              {createError && <p className="text-sm text-red-600">{createError}</p>}
+              {createError && (
+                <p className="text-sm text-red-600">
+                  {createError}
+                  {createIsPlanLimit && (
+                    <>
+                      {" "}
+                      <Link to="/billing" className="underline hover:no-underline">
+                        Upgrade
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
               <button
                 type="submit"
                 disabled={creating}
@@ -140,7 +158,19 @@ export default function GroupsPage() {
                 onChange={(e) => setInviteCode(e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-navy-500"
               />
-              {joinError && <p className="text-sm text-red-600">{joinError}</p>}
+              {joinError && (
+                <p className="text-sm text-red-600">
+                  {joinError}
+                  {joinIsPlanLimit && (
+                    <>
+                      {" "}
+                      <Link to="/billing" className="underline hover:no-underline">
+                        Upgrade
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
               <button
                 type="submit"
                 disabled={joining}

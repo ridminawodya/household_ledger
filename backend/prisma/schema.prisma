@@ -8,28 +8,33 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String?
-  googleId     String?  @unique
-  name         String
-  createdAt    DateTime @default(now())
+  id             String    @id @default(uuid())
+  email          String    @unique
+  passwordHash   String?
+  googleId       String?   @unique
+  name           String
+  createdAt      DateTime  @default(now())
+  plan           String    @default("free")
+  premiumSince   DateTime?
 
   memberships       GroupMember[]
   expensesPaid      Expense[]        @relation("ExpensePaidBy")
   expenseShares     ExpenseShare[]
   choreAssignments  ChoreAssignment[]
+  groupsCreated     Group[]          @relation("GroupCreatedBy")
 }
 
 model Group {
-  id         String   @id @default(uuid())
-  name       String
-  inviteCode String   @unique
-  createdAt  DateTime @default(now())
+  id          String   @id @default(uuid())
+  name        String
+  inviteCode  String   @unique
+  createdAt   DateTime @default(now())
+  createdById String?
 
-  members  GroupMember[]
-  expenses Expense[]
-  chores   Chore[]
+  createdBy User?         @relation("GroupCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  members   GroupMember[]
+  expenses  Expense[]
+  chores    Chore[]
 }
 
 model GroupMember {

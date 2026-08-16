@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth";
+import { isPremiumPlan } from "../lib/plans";
 
 const router = Router();
 router.use(requireAuth);
@@ -24,6 +25,17 @@ router.post("/parse-expense", async (req: AuthedRequest, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
   const { groupId, text } = parsed.data;
+
+  const user = await prisma.user.findUnique({ where: { id: req.userId! } });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  if (!isPremiumPlan(user.plan)) {
+    return res.status(403).json({
+      error: "AI expense parsing is a premium feature. Upgrade to premium to use it.",
+      code: "PLAN_LIMIT_AI",
+    });
+  }
 
   const membership = await prisma.groupMember.findUnique({
     where: { userId_groupId: { userId: req.userId!, groupId } },

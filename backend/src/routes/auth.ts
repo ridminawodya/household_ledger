@@ -2,7 +2,7 @@ import { Router } from "express";
 import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { hashPassword, verifyPassword, signToken } from "../lib/auth";
+import { hashPassword, verifyPassword, signToken, isAdminEmail } from "../lib/auth";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth";
 
 const router = Router();
@@ -45,7 +45,7 @@ router.post("/signup", async (req, res) => {
   const token = signToken({ userId: user.id });
   res.status(201).json({
     token,
-    user: { id: user.id, email: user.email, name: user.name },
+    user: { id: user.id, email: user.email, name: user.name, isAdmin: isAdminEmail(user.email), plan: user.plan },
   });
 });
 
@@ -74,7 +74,7 @@ router.post("/login", async (req, res) => {
   const token = signToken({ userId: user.id });
   res.json({
     token,
-    user: { id: user.id, email: user.email, name: user.name },
+    user: { id: user.id, email: user.email, name: user.name, isAdmin: isAdminEmail(user.email), plan: user.plan },
   });
 });
 
@@ -83,7 +83,9 @@ router.get("/me", requireAuth, async (req: AuthedRequest, res) => {
   if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
-  res.json({ user: { id: user.id, email: user.email, name: user.name } });
+  res.json({
+    user: { id: user.id, email: user.email, name: user.name, isAdmin: isAdminEmail(user.email), plan: user.plan },
+  });
 });
 
 router.get("/google", (_req, res) => {

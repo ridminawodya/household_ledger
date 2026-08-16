@@ -27,3 +27,11 @@ export function signToken(payload: JwtPayload): string {
 export function verifyToken(token: string): JwtPayload {
   return jwt.verify(token, JWT_SECRET as string) as JwtPayload;
 }
+
+export function isAdminEmail(email: string): boolean {
+  const list = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return list.includes(email.toLowerCase());
+}
