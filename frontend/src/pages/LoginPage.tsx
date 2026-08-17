@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 import { api, ApiError } from "../lib/api";
+import { isNativePlatform, openExternalUrl } from "../lib/nativeBrowser";
 import AuthBackdrop from "../components/AuthBackdrop";
 import GoogleIcon from "../components/GoogleIcon";
 
@@ -45,13 +46,14 @@ export default function LoginPage() {
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-2 mb-6">Log in</h1>
 
-        <a
-          href={api.googleLoginUrl()}
+        <button
+          type="button"
+          onClick={() => openExternalUrl(api.googleLoginUrl(isNativePlatform()))}
           className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md active:scale-[0.98]"
         >
           <GoogleIcon />
           Continue with Google
-        </a>
+        </button>
 
         <div className="my-6 flex items-center gap-3">
           <div className="h-px flex-1 bg-gray-200" />

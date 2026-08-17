@@ -11,6 +11,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
 const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5173";
+const APP_URL_SCHEME = "householdledger://auth/callback";
 
 function getGoogleClient(): OAuth2Client {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI) {
@@ -88,7 +89,7 @@ router.get("/me", requireAuth, async (req: AuthedRequest, res) => {
   });
 });
 
-router.get("/google", (_req, res) => {
+router.get("/google", (req, res) => {
   let client: OAuth2Client;
   try {
     client = getGoogleClient();
@@ -96,25 +97,34 @@ router.get("/google", (_req, res) => {
     return res.status(500).json({ error: "Google sign-in is not configured on this server" });
   }
 
+  // The Android app opens this in the system browser (Google blocks embedded
+  // WebViews) and passes ?native=1 so the callback redirects back into the
+  // app via a custom URL scheme instead of the web frontend.
+  const isNative = req.query.native === "1";
+
   const url = client.generateAuthUrl({
     access_type: "online",
     scope: ["openid", "email", "profile"],
     prompt: "select_account",
+    state: isNative ? "native" : undefined,
   });
   res.redirect(url);
 });
 
 router.get("/google/callback", async (req, res) => {
+  const isNative = req.query.state === "native";
+  const errorRedirectBase = isNative ? APP_URL_SCHEME : `${FRONTEND_URL}/login`;
+
   const code = typeof req.query.code === "string" ? req.query.code : null;
   if (!code) {
-    return res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent("Google sign-in was cancelled")}`);
+    return res.redirect(`${errorRedirectBase}?error=${encodeURIComponent("Google sign-in was cancelled")}`);
   }
 
   let client: OAuth2Client;
   try {
     client = getGoogleClient();
   } catch {
-    return res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent("Google sign-in is not configured")}`);
+    return res.redirect(`${errorRedirectBase}?error=${encodeURIComponent("Google sign-in is not configured")}`);
   }
 
   try {
@@ -156,9 +166,13 @@ router.get("/google/callback", async (req, res) => {
     }
 
     const token = signToken({ userId: user.id });
-    res.redirect(`${FRONTEND_URL}/auth/google/callback?token=${encodeURIComponent(token)}`);
+    if (isNative) {
+      res.redirect(`${APP_URL_SCHEME}?token=${encodeURIComponent(token)}`);
+    } else {
+      res.redirect(`${FRONTEND_URL}/auth/google/callback?token=${encodeURIComponent(token)}`);
+    }
   } catch {
-    res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent("Google sign-in failed")}`);
+    res.redirect(`${errorRedirectBase}?error=${encodeURIComponent("Google sign-in failed")}`);
   }
 });
 

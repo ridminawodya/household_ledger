@@ -14,11 +14,13 @@ import SettleUpPage from "./pages/SettleUpPage";
 import ChoresPage from "./pages/ChoresPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import BillingPage from "./pages/BillingPage";
+import NativeDeepLinkHandler from "./components/NativeDeepLinkHandler";
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <NativeDeepLinkHandler />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />

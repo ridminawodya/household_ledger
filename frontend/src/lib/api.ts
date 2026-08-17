@@ -302,7 +302,7 @@ export const api = {
 
   getMe: () => request<{ user: User }>("/auth/me"),
 
-  googleLoginUrl: () => `${API_URL}/auth/google`,
+  googleLoginUrl: (native = false) => `${API_URL}/auth/google${native ? "?native=1" : ""}`,
 
   createGroup: (name: string) =>
     request<Group>("/groups", { method: "POST", body: { name } }).then((g) => {

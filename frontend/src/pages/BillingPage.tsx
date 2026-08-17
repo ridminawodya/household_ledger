@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../lib/AuthContext";
 import { api, ApiError } from "../lib/api";
+import { openExternalUrl } from "../lib/nativeBrowser";
 
 export default function BillingPage() {
   const { user } = useAuth();
@@ -14,7 +15,8 @@ export default function BillingPage() {
     setLoading(true);
     try {
       const { url } = await api.createCheckout();
-      window.location.href = url;
+      await openExternalUrl(url);
+      setLoading(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to start checkout");
       setLoading(false);
