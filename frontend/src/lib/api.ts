@@ -78,6 +78,7 @@ export interface Group {
   name: string;
   inviteCode: string;
   createdAt: string;
+  createdById: string | null;
 }
 
 export interface GroupMember {
@@ -299,6 +300,12 @@ export const api = {
   listGroups: () => request<Group[]>("/groups"),
 
   getGroup: (groupId: string) => request<GroupDetail>(`/groups/${groupId}`),
+
+  leaveGroup: (groupId: string) =>
+    request<void>(`/groups/${groupId}/leave`, { method: "POST" }).then(() => notifyGroupsChanged()),
+
+  removeMember: (groupId: string, userId: string) =>
+    request<void>(`/groups/${groupId}/members/${userId}`, { method: "DELETE" }),
 
   getMonthlyReport: (groupId: string, month: string) =>
     request<MonthlyReport>(`/groups/${groupId}/report?month=${month}`),

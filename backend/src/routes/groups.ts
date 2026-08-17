@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth";
 import { FREE_GROUP_LIMIT, FREE_MEMBER_LIMIT, isPremiumPlan } from "../lib/plans";
+import { computeBalances } from "../lib/settleUp";
 
 const router = Router();
 router.use(requireAuth);
@@ -130,6 +131,98 @@ router.get("/:id", async (req: AuthedRequest, res) => {
   }
 
   res.json(group);
+});
+
+async function getMemberBalanceCents(groupId: string, userId: string): Promise<number> {
+  const [expenses, shares, settlements] = await Promise.all([
+    prisma.expense.findMany({
+      where: { groupId, deletedAt: null },
+      select: { id: true, paidById: true, amountCents: true },
+    }),
+    prisma.expenseShare.findMany({
+      where: { expense: { groupId, deletedAt: null } },
+      select: { expenseId: true, userId: true, amountCents: true },
+    }),
+    prisma.settlement.findMany({
+      where: { groupId },
+      select: { fromUserId: true, toUserId: true, amountCents: true },
+    }),
+  ]);
+
+  const balances = computeBalances(expenses, shares, settlements);
+  return balances.find((b) => b.userId === userId)?.amountCents ?? 0;
+}
+
+async function removeMemberOrError(
+  groupId: string,
+  userId: string
+): Promise<{ error: string } | null> {
+  const group = await prisma.group.findUnique({ where: { id: groupId } });
+  if (!group) {
+    return { error: "Group not found" };
+  }
+  if (group.createdById === userId) {
+    return { error: "The group creator can't leave the group. Delete the group instead." };
+  }
+
+  const balanceCents = await getMemberBalanceCents(groupId, userId);
+  if (balanceCents !== 0) {
+    return { error: "This member has an unsettled balance in this group. Settle up before leaving." };
+  }
+
+  await prisma.$transaction([
+    prisma.choreAssignment.deleteMany({
+      where: { userId, chore: { groupId }, completedAt: null },
+    }),
+    prisma.groupMember.delete({
+      where: { userId_groupId: { userId, groupId } },
+    }),
+  ]);
+
+  return null;
+}
+
+router.post("/:id/leave", async (req: AuthedRequest, res) => {
+  const membership = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: req.userId!, groupId: req.params.id } },
+  });
+  if (!membership) {
+    return res.status(403).json({ error: "You are not a member of this group" });
+  }
+
+  const result = await removeMemberOrError(req.params.id, req.userId!);
+  if (result) {
+    return res.status(409).json(result);
+  }
+
+  res.status(204).send();
+});
+
+router.delete("/:id/members/:userId", async (req: AuthedRequest, res) => {
+  const group = await prisma.group.findUnique({ where: { id: req.params.id } });
+  if (!group) {
+    return res.status(404).json({ error: "Group not found" });
+  }
+  if (group.createdById !== req.userId) {
+    return res.status(403).json({ error: "Only the group creator can remove members" });
+  }
+  if (req.params.userId === req.userId) {
+    return res.status(400).json({ error: "Use leave instead of removing yourself" });
+  }
+
+  const targetMembership = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: req.params.userId, groupId: req.params.id } },
+  });
+  if (!targetMembership) {
+    return res.status(404).json({ error: "That user is not a member of this group" });
+  }
+
+  const result = await removeMemberOrError(req.params.id, req.params.userId);
+  if (result) {
+    return res.status(409).json(result);
+  }
+
+  res.status(204).send();
 });
 
 const monthQuerySchema = z.object({
