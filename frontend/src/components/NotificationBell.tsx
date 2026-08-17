@@ -27,6 +27,18 @@ function notificationText(n: Notification): string {
   }
 }
 
+function notificationDotColor(type: Notification["type"]): string {
+  switch (type) {
+    case "expense_added":
+      return "bg-orange-400";
+    case "chore_completed":
+      return "bg-green-500";
+    case "chore_assigned":
+    default:
+      return "bg-navy-400";
+  }
+}
+
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -81,28 +93,28 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={handleToggle}
-        className="relative text-gray-600 hover:text-gray-900"
+        className="relative text-gray-600 transition-colors hover:text-gray-900"
         aria-label="Notifications"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[10px] font-semibold text-white">
+          <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[10px] font-semibold text-white animate-pop">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white rounded-lg shadow-xl border border-gray-100 z-30">
+        <div className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white rounded-lg shadow-xl border border-gray-100 z-30 animate-scale-in origin-top-right">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
             {unreadCount > 0 && (
               <button
                 type="button"
                 onClick={handleMarkAllRead}
-                className="text-xs text-navy-600 hover:underline"
+                className="text-xs text-navy-600 transition-colors hover:underline"
               >
                 Mark all read
               </button>
@@ -118,19 +130,25 @@ export default function NotificationBell() {
                 key={n.id}
                 to={`/groups/${n.groupId}`}
                 onClick={() => handleNotificationClick(n)}
-                className={`block px-4 py-2.5 border-b border-gray-50 last:border-0 hover:bg-gray-50 ${
+                className={`flex items-start gap-2.5 px-4 py-2.5 border-b border-gray-50 last:border-0 transition-colors hover:bg-gray-50 ${
                   !n.readAt ? "bg-navy-50/50" : ""
                 }`}
               >
-                <p className="text-sm text-gray-900">
-                  {notificationText(n)}
-                  {n.amountCents !== null && (
-                    <span className="font-medium"> ({formatCents(n.amountCents)})</span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {n.group.name} · {formatTimestamp(n.createdAt)}
-                </p>
+                <span
+                  className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${notificationDotColor(n.type)}`}
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-900">
+                    {notificationText(n)}
+                    {n.amountCents !== null && (
+                      <span className="font-medium"> ({formatCents(n.amountCents)})</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {n.group.name} · {formatTimestamp(n.createdAt)}
+                  </p>
+                </div>
               </Link>
             ))}
           </div>

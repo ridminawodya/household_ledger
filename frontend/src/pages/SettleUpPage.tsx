@@ -101,9 +101,14 @@ export default function SettleUpPage() {
                   const canPay = t.fromUserId === user?.id;
                   const justPaid = justPaidKey === key;
                   return (
-                    <li key={key} className="py-3 flex items-center justify-between gap-4">
+                    <li
+                      key={key}
+                      className={`py-3 px-2 -mx-2 rounded-md flex items-center justify-between gap-4 transition-colors ${
+                        justPaid ? "bg-green-50" : "hover:bg-gray-50"
+                      }`}
+                    >
                       <div className="flex items-center gap-2 min-w-0">
-                        <StatusBadge status="owed" />
+                        <StatusBadge status={justPaid ? "paid" : "owed"} />
                         <p className="text-sm text-gray-900 truncate">
                           <span className="font-medium">{memberName(t.fromUserId)}</span>{" "}
                           owes{" "}
@@ -119,7 +124,11 @@ export default function SettleUpPage() {
                             type="button"
                             onClick={() => openConfirm(t)}
                             disabled={justPaid}
-                            className="text-xs font-medium text-white bg-navy-600 rounded-full px-3 py-1.5 hover:bg-navy-500 disabled:opacity-50"
+                            className={`text-xs font-medium rounded-full px-3 py-1.5 transition-all active:scale-[0.97] disabled:opacity-70 ${
+                              justPaid
+                                ? "text-green-700 bg-green-100"
+                                : "text-white bg-navy-600 hover:bg-navy-500"
+                            }`}
                           >
                             {justPaid ? "Paid ✓" : "Pay now"}
                           </button>
@@ -138,7 +147,10 @@ export default function SettleUpPage() {
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Payment history</h2>
             <ul className="divide-y divide-gray-100">
               {history.map((s) => (
-                <li key={s.id} className="py-2.5 flex items-center justify-between gap-4">
+                <li
+                  key={s.id}
+                  className="py-2.5 px-2 -mx-2 rounded-md flex items-center justify-between gap-4 transition-colors hover:bg-gray-50"
+                >
                   <div className="flex items-center gap-2 min-w-0">
                     <StatusBadge status="paid" />
                     <p className="text-sm text-gray-900 truncate">
@@ -163,7 +175,7 @@ export default function SettleUpPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6">
+          <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6 animate-scale-in">
             <h2 className="text-base font-semibold text-gray-900 mb-1">Confirm payment</h2>
             <p className="text-xs text-gray-500 mb-5">
               This records that you paid {memberName(pendingPayment.toUserId)} outside the app
@@ -192,7 +204,7 @@ export default function SettleUpPage() {
                 type="button"
                 onClick={() => setPendingPayment(null)}
                 disabled={confirming}
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -200,7 +212,7 @@ export default function SettleUpPage() {
                 type="button"
                 onClick={handleConfirmPayment}
                 disabled={confirming}
-                className="flex-1 rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
+                className="flex-1 rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-navy-500 active:scale-[0.98] disabled:opacity-50"
               >
                 {confirming ? "Confirming…" : "Confirm payment"}
               </button>

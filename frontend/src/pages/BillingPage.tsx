@@ -54,8 +54,8 @@ export default function BillingPage() {
           </div>
 
           <div
-            className={`bg-white rounded-lg shadow p-6 border-2 ${
-              isPremium ? "border-navy-500" : "border-transparent"
+            className={`bg-white rounded-lg shadow p-6 border-2 transition-all ${
+              isPremium ? "border-navy-500" : "border-transparent hover:border-navy-200 hover:shadow-md"
             }`}
           >
             <div className="flex items-center justify-between mb-1">
@@ -81,7 +81,7 @@ export default function BillingPage() {
                 type="button"
                 onClick={handleUpgrade}
                 disabled={loading}
-                className="w-full rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
+                className="w-full rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-navy-500 active:scale-[0.98] disabled:opacity-50"
               >
                 {loading ? "Redirecting…" : "Upgrade to Premium"}
               </button>

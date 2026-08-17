@@ -154,12 +154,12 @@ export default function ChoresPage() {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-navy-500"
             />
             <select
               value={frequency}
               onChange={(e) => setFrequency(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-navy-500"
             >
               {FREQUENCIES.map((f) => (
                 <option key={f} value={f}>
@@ -186,7 +186,7 @@ export default function ChoresPage() {
             <button
               type="submit"
               disabled={creating}
-              className="w-full rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
+              className="w-full rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-navy-500 active:scale-[0.98] disabled:opacity-50"
             >
               {creating ? "Adding…" : "Add chore"}
             </button>
@@ -207,29 +207,39 @@ export default function ChoresPage() {
                 const turn = currentTurnAssignment(chore);
                 const latest = latestAssignment(chore);
                 const justCompleted = !turn && latest && latest.completedAt !== null ? latest : null;
+                const statusDotColor = turn ? "bg-navy-500" : justCompleted ? "bg-green-500" : "bg-amber-400";
                 return (
-                  <li key={chore.id} className="py-4">
+                  <li
+                    key={chore.id}
+                    className="py-4 px-2 -mx-2 rounded-md transition-colors hover:bg-gray-50"
+                  >
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {chore.title}
-                          {chore.autoRotate && (
-                            <span
-                              className="ml-1.5 text-[10px] font-medium text-navy-700 bg-navy-50 rounded-full px-1.5 py-0.5 align-middle"
-                              title="Auto-assigns to the next person each cycle"
-                            >
-                              ↻ auto
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-xs text-gray-500">{chore.frequency}</p>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`h-2 w-2 rounded-full shrink-0 ${statusDotColor}`}
+                          aria-hidden="true"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {chore.title}
+                            {chore.autoRotate && (
+                              <span
+                                className="ml-1.5 text-[10px] font-medium text-navy-700 bg-navy-50 rounded-full px-1.5 py-0.5 align-middle"
+                                title="Auto-assigns to the next person each cycle"
+                              >
+                                ↻ auto
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-500">{chore.frequency}</p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         {AUTO_ROTATE_FREQUENCIES.has(chore.frequency) && (
                           <button
                             onClick={() => handleToggleAutoRotate(chore.id, !chore.autoRotate)}
                             disabled={togglingId === chore.id}
-                            className="text-xs text-gray-500 hover:text-navy-600 disabled:opacity-50"
+                            className="text-xs text-gray-500 transition-colors hover:text-navy-600 disabled:opacity-50"
                           >
                             {togglingId === chore.id
                               ? "…"
@@ -240,7 +250,7 @@ export default function ChoresPage() {
                         )}
                         <button
                           onClick={() => openAssignForm(chore.id)}
-                          className="text-xs text-navy-600 hover:underline"
+                          className="text-xs text-navy-600 transition-colors hover:text-navy-800 hover:underline"
                         >
                           Assign
                         </button>
@@ -256,7 +266,7 @@ export default function ChoresPage() {
                         <button
                           onClick={() => handleComplete(turn.id)}
                           disabled={completingId === turn.id}
-                          className="rounded-md bg-white border border-navy-300 px-2 py-1 text-xs font-semibold text-navy-700 hover:bg-navy-100 disabled:opacity-50"
+                          className="rounded-md bg-white border border-navy-300 px-2 py-1 text-xs font-semibold text-navy-700 transition-colors hover:bg-navy-100 disabled:opacity-50"
                         >
                           {completingId === turn.id ? "Marking…" : "Mark complete"}
                         </button>
@@ -271,12 +281,15 @@ export default function ChoresPage() {
                         </p>
                       </div>
                     ) : (
-                      <p className="mt-2 text-xs text-gray-400">Not currently assigned.</p>
+                      <div className="mt-2 flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2">
+                        <span className="text-amber-500" aria-hidden="true">●</span>
+                        <p className="text-xs text-amber-800">Not currently assigned.</p>
+                      </div>
                     )}
 
                     {chore.assignments.some((a) => a.completedAt !== null) && (
-                      <details className="mt-2">
-                        <summary className="text-xs text-gray-400 cursor-pointer">
+                      <details className="mt-2 group">
+                        <summary className="text-xs text-gray-400 cursor-pointer transition-colors hover:text-gray-600">
                           Completion history
                         </summary>
                         <ul className="mt-1 space-y-1">
@@ -296,14 +309,14 @@ export default function ChoresPage() {
                       <form
                         onSubmit={handleAssign}
                         noValidate
-                        className="mt-3 flex flex-col sm:flex-row sm:items-end gap-2"
+                        className="mt-3 flex flex-col sm:flex-row sm:items-end gap-2 animate-slide-up"
                       >
                         <div className="flex-1">
                           <label className="block text-xs font-medium text-gray-700 mb-1">Assign to</label>
                           <select
                             value={assignUserId}
                             onChange={(e) => setAssignUserId(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                            className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-navy-500"
                           >
                             {group?.members.map((m) => (
                               <option key={m.userId} value={m.userId}>
@@ -318,21 +331,21 @@ export default function ChoresPage() {
                             type="date"
                             value={assignDueDate}
                             onChange={(e) => setAssignDueDate(e.target.value)}
-                            className="w-full sm:w-auto rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                            className="w-full sm:w-auto rounded-md border border-gray-300 px-2 py-1.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-navy-500"
                           />
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             type="submit"
                             disabled={assigning}
-                            className="rounded-md bg-navy-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
+                            className="rounded-md bg-navy-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-navy-500 disabled:opacity-50"
                           >
                             {assigning ? "…" : "Save"}
                           </button>
                           <button
                             type="button"
                             onClick={() => setAssigningChoreId(null)}
-                            className="text-sm text-gray-500 hover:text-gray-900"
+                            className="text-sm text-gray-500 transition-colors hover:text-gray-900"
                           >
                             Cancel
                           </button>

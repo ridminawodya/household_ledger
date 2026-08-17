@@ -405,7 +405,7 @@ export default function AdminDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {topGroups.map((g) => (
-                    <tr key={g.groupId}>
+                    <tr key={g.groupId} className="transition-colors hover:bg-gray-50">
                       <td className="py-2 text-gray-900">{g.groupName}</td>
                       <td className="py-2 text-right text-gray-500">{g.expenseCount}</td>
                       <td className="py-2 text-right font-medium text-gray-900">{formatCents(g.totalCents)}</td>
@@ -431,7 +431,7 @@ export default function AdminDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {topUsers.map((u) => (
-                    <tr key={u.userId}>
+                    <tr key={u.userId} className="transition-colors hover:bg-gray-50">
                       <td className="py-2 text-gray-900">{u.userName}</td>
                       <td className="py-2 text-right text-gray-500">{u.expenseCount}</td>
                       <td className="py-2 text-right font-medium text-gray-900">{formatCents(u.totalCents)}</td>
@@ -533,7 +533,7 @@ export default function AdminDashboardPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {users.map((u) => (
-                      <tr key={u.id}>
+                      <tr key={u.id} className="transition-colors hover:bg-gray-50">
                         <td className="py-2 text-gray-900">{u.name}</td>
                         <td className="py-2 text-gray-500">{u.email}</td>
                         <td className="py-2">
@@ -579,7 +579,7 @@ export default function AdminDashboardPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {groups.map((g) => (
-                      <tr key={g.id}>
+                      <tr key={g.id} className="transition-colors hover:bg-gray-50">
                         <td className="py-2 text-gray-900">{g.name}</td>
                         <td className="py-2 text-gray-500">{formatShortDate(g.createdAt.slice(0, 10))}</td>
                         <td className="py-2 text-right text-gray-900">{g.memberCount}</td>

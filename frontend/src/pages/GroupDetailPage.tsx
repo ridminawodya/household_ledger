@@ -192,14 +192,14 @@ export default function GroupDetailPage() {
                   <button
                     type="submit"
                     disabled={renameSaving}
-                    className="text-xs font-semibold text-white bg-navy-600 rounded-md px-2 py-1 hover:bg-navy-500 disabled:opacity-50"
+                    className="text-xs font-semibold text-white bg-navy-600 rounded-md px-2 py-1 transition-colors hover:bg-navy-500 disabled:opacity-50"
                   >
                     {renameSaving ? "…" : "Save"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setRenaming(false)}
-                    className="text-xs text-gray-500 hover:text-gray-900"
+                    className="text-xs text-gray-500 transition-colors hover:text-gray-900"
                   >
                     Cancel
                   </button>
@@ -213,7 +213,10 @@ export default function GroupDetailPage() {
                 <h2 className="text-sm font-semibold text-gray-900 mb-3">Members</h2>
                 <ul className="divide-y divide-gray-100">
                   {group.members.map((m) => (
-                    <li key={m.id} className="py-2 flex items-center justify-between gap-3">
+                    <li
+                      key={m.id}
+                      className="py-2 px-2 -mx-2 rounded-md flex items-center justify-between gap-3 transition-colors hover:bg-gray-50"
+                    >
                       <p className="text-sm text-gray-700 min-w-0 truncate">
                         {m.user.name} <span className="text-gray-400">({m.user.email})</span>
                         {m.userId === group.createdById && (
@@ -229,7 +232,7 @@ export default function GroupDetailPage() {
                             setActionError(null);
                             setPendingAction({ type: "remove", member: m });
                           }}
-                          className="text-xs font-medium text-red-600 shrink-0 hover:underline"
+                          className="text-xs font-medium text-red-600 shrink-0 transition-colors hover:underline"
                         >
                           Remove
                         </button>
@@ -245,7 +248,7 @@ export default function GroupDetailPage() {
                       setActionError(null);
                       setPendingAction({ type: "leave" });
                     }}
-                    className="mt-4 text-xs font-medium text-red-600 hover:underline"
+                    className="mt-4 text-xs font-medium text-red-600 transition-colors hover:underline"
                   >
                     Leave group
                   </button>
@@ -263,14 +266,14 @@ export default function GroupDetailPage() {
                   {categories.map((c) => (
                     <li
                       key={c.id}
-                      className="flex items-center gap-1.5 text-xs bg-gray-100 rounded-full pl-2.5 pr-1.5 py-1"
+                      className="flex items-center gap-1.5 text-xs bg-gray-100 rounded-full pl-2.5 pr-1.5 py-1 transition-colors hover:bg-gray-200"
                     >
                       <span className="capitalize text-gray-700">{c.name}</span>
                       <button
                         type="button"
                         onClick={() => handleDeleteCategory(c)}
                         aria-label={`Remove ${c.name}`}
-                        className="text-gray-400 hover:text-red-600"
+                        className="text-gray-400 transition-colors hover:text-red-600"
                       >
                         ✕
                       </button>
@@ -290,7 +293,7 @@ export default function GroupDetailPage() {
                 <button
                   type="submit"
                   disabled={categorySaving || !newCategory.trim()}
-                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
                 >
                   Add
                 </button>
@@ -314,7 +317,7 @@ export default function GroupDetailPage() {
                   type="button"
                   onClick={handleDownloadReport}
                   disabled={generating}
-                  className="rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
+                  className="rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-navy-500 active:scale-[0.98] disabled:opacity-50"
                 >
                   {generating ? "Generating…" : "Download PDF"}
                 </button>
@@ -333,7 +336,7 @@ export default function GroupDetailPage() {
                   type="button"
                   onClick={handleRegenerateInvite}
                   disabled={regenerating}
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
                 >
                   {regenerating ? "Regenerating…" : "Regenerate invite code"}
                 </button>
@@ -353,7 +356,7 @@ export default function GroupDetailPage() {
                     setActionError(null);
                     setPendingAction({ type: "delete-group" });
                   }}
-                  className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                 >
                   Delete group
                 </button>
@@ -369,7 +372,7 @@ export default function GroupDetailPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6">
+          <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6 animate-scale-in">
             <h2 className="text-base font-semibold text-gray-900 mb-2">
               {pendingAction.type === "leave" && "Leave this group?"}
               {pendingAction.type === "remove" && `Remove ${pendingAction.member.user.name}?`}
@@ -391,7 +394,7 @@ export default function GroupDetailPage() {
                 type="button"
                 onClick={() => setPendingAction(null)}
                 disabled={actionLoading}
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -399,7 +402,7 @@ export default function GroupDetailPage() {
                 type="button"
                 onClick={handleConfirmAction}
                 disabled={actionLoading}
-                className="flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+                className="flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-red-500 active:scale-[0.98] disabled:opacity-50"
               >
                 {actionLoading
                   ? "Working…"

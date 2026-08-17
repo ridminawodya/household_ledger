@@ -90,22 +90,24 @@ export default function GroupsPage() {
           {groups !== null && groups.length > 0 && (
             <ul className="divide-y divide-gray-100">
               {groups.map((group) => (
-                <li key={group.id} className="py-3 flex items-center justify-between">
-                  <div>
+                <li key={group.id} className="-mx-2 rounded-md transition-colors hover:bg-gray-50">
+                  <div className="px-2 py-3 flex items-center justify-between">
+                    <div>
+                      <Link
+                        to={`/groups/${group.id}`}
+                        className="text-sm font-medium text-navy-600 transition-colors hover:text-navy-800 hover:underline"
+                      >
+                        {group.name}
+                      </Link>
+                      <p className="text-xs text-gray-500">Invite code: {group.inviteCode}</p>
+                    </div>
                     <Link
                       to={`/groups/${group.id}`}
-                      className="text-sm font-medium text-navy-600 hover:underline"
+                      className="text-xs text-gray-500 transition-colors hover:text-gray-900"
                     >
-                      {group.name}
+                      View →
                     </Link>
-                    <p className="text-xs text-gray-500">Invite code: {group.inviteCode}</p>
                   </div>
-                  <Link
-                    to={`/groups/${group.id}`}
-                    className="text-xs text-gray-500 hover:text-gray-900"
-                  >
-                    View →
-                  </Link>
                 </li>
               ))}
             </ul>
@@ -140,7 +142,7 @@ export default function GroupsPage() {
               <button
                 type="submit"
                 disabled={creating}
-                className="w-full rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
+                className="w-full rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-navy-500 active:scale-[0.98] disabled:opacity-50"
               >
                 {creating ? "Creating…" : "Create group"}
               </button>
@@ -174,7 +176,7 @@ export default function GroupsPage() {
               <button
                 type="submit"
                 disabled={joining}
-                className="w-full rounded-md bg-white border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+                className="w-full rounded-md bg-white border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-900 transition-all hover:bg-gray-50 active:scale-[0.98] disabled:opacity-50"
               >
                 {joining ? "Joining…" : "Join group"}
               </button>

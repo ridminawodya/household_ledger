@@ -394,7 +394,10 @@ export default function ExpensesPage() {
             return (
               <ul className="divide-y divide-gray-100">
                 {filtered.map((expense) => (
-                <li key={expense.id} className="py-3 flex items-center justify-between gap-3">
+                <li
+                  key={expense.id}
+                  className="py-3 px-2 -mx-2 rounded-md flex items-center justify-between gap-3 transition-colors hover:bg-gray-50"
+                >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {expense.description}
@@ -416,7 +419,7 @@ export default function ExpensesPage() {
                     <button
                       type="button"
                       onClick={() => setViewingExpense(expense)}
-                      className="text-xs font-medium text-navy-600 border border-navy-200 rounded-full px-2.5 py-1 hover:bg-navy-50"
+                      className="text-xs font-medium text-navy-600 border border-navy-200 rounded-full px-2.5 py-1 transition-colors hover:bg-navy-50"
                     >
                       View
                     </button>
@@ -531,7 +534,7 @@ function ExpenseDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true">
-      <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6 max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6 max-h-[90vh] overflow-y-auto animate-scale-in">
         {!editing ? (
           <>
             <div className="flex items-start justify-between gap-3 mb-4">
@@ -579,11 +582,11 @@ function ExpenseDetailModal({
 
             <h3 className="text-xs font-semibold text-gray-700 mb-2">Receipt</h3>
             {expense.receiptUrl ? (
-              <a href={expense.receiptUrl} target="_blank" rel="noreferrer" className="block mb-4">
+              <a href={expense.receiptUrl} target="_blank" rel="noreferrer" className="block mb-4 group">
                 <img
                   src={expense.receiptUrl}
                   alt="Receipt"
-                  className="w-full rounded-md border border-gray-200 max-h-48 object-cover"
+                  className="w-full rounded-md border border-gray-200 max-h-48 object-cover transition-opacity group-hover:opacity-80"
                 />
               </a>
             ) : (
@@ -601,7 +604,7 @@ function ExpenseDetailModal({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingReceipt}
-              className="w-full mb-4 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="w-full mb-4 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
             >
               {uploadingReceipt ? "Uploading…" : expense.receiptUrl ? "Replace receipt" : "Add receipt photo"}
             </button>
@@ -613,7 +616,7 @@ function ExpenseDetailModal({
                 <button
                   type="button"
                   onClick={startEdit}
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                 >
                   Edit
                 </button>
@@ -621,7 +624,7 @@ function ExpenseDetailModal({
                   type="button"
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="flex-1 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  className="flex-1 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
                 >
                   {deleting ? "Deleting…" : "Delete"}
                 </button>
@@ -631,7 +634,7 @@ function ExpenseDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
             >
               Close
             </button>
@@ -674,14 +677,14 @@ function ExpenseDetailModal({
                 type="button"
                 onClick={() => setEditing(false)}
                 disabled={saving}
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white hover:bg-navy-500 disabled:opacity-50"
+                className="flex-1 rounded-md bg-navy-600 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-navy-500 active:scale-[0.98] disabled:opacity-50"
               >
                 {saving ? "Saving…" : "Save"}
               </button>
