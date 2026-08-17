@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth";
 import { addRecurrenceInterval, isRecurrenceFrequency } from "../lib/recurrence";
+import { notifyGroupMembers, notifyUser } from "../lib/notifications";
 
 const router = Router();
 router.use(requireAuth);
@@ -119,6 +120,12 @@ async function advanceAutoRotatingChores(groupId: string): Promise<void> {
     await prisma.choreAssignment.create({
       data: { choreId: chore.id, userId: nextMember.userId, dueDate },
     });
+
+    await notifyUser(nextMember.userId, groupId, {
+      type: "chore_assigned",
+      actorName: "Auto-assign",
+      message: chore.title,
+    });
   }
 }
 
@@ -168,14 +175,25 @@ router.post("/:choreId/assignments", async (req: AuthedRequest, res) => {
     return res.status(400).json({ error: "Assigned user is not a member of this group" });
   }
 
-  const assignment = await prisma.choreAssignment.create({
-    data: {
-      choreId: chore.id,
-      userId: parsed.data.userId,
-      dueDate: parsed.data.dueDate,
-    },
-    include: { user: { select: { id: true, name: true, email: true } } },
-  });
+  const [assignment, assigner] = await Promise.all([
+    prisma.choreAssignment.create({
+      data: {
+        choreId: chore.id,
+        userId: parsed.data.userId,
+        dueDate: parsed.data.dueDate,
+      },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    }),
+    prisma.user.findUnique({ where: { id: req.userId! } }),
+  ]);
+
+  if (parsed.data.userId !== req.userId) {
+    await notifyUser(parsed.data.userId, chore.groupId, {
+      type: "chore_assigned",
+      actorName: assigner?.name ?? "Someone",
+      message: chore.title,
+    });
+  }
 
   res.status(201).json(assignment);
 });
@@ -197,7 +215,13 @@ router.post("/assignments/:assignmentId/complete", async (req: AuthedRequest, re
   const updated = await prisma.choreAssignment.update({
     where: { id: req.params.assignmentId },
     data: { completedAt: new Date() },
-    include: { user: { select: { id: true, name: true, email: true } } },
+    include: { user: { select: { id: true, name: true, email: true } }, chore: true },
+  });
+
+  await notifyGroupMembers(assignment.chore.groupId, updated.userId, {
+    type: "chore_completed",
+    actorName: updated.user?.name ?? "Someone",
+    message: updated.chore.title,
   });
 
   res.json(updated);

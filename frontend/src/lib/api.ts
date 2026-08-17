@@ -93,6 +93,25 @@ export interface GroupDetail extends Group {
   members: GroupMember[];
 }
 
+export interface GroupCategory {
+  id: string;
+  groupId: string;
+  name: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  groupId: string;
+  type: "expense_added" | "chore_assigned" | "chore_completed";
+  actorName: string;
+  message: string;
+  amountCents: number | null;
+  createdAt: string;
+  readAt: string | null;
+  group: { id: string; name: string };
+}
+
 export interface ExpenseShare {
   id: string;
   expenseId: string;
@@ -307,8 +326,36 @@ export const api = {
   removeMember: (groupId: string, userId: string) =>
     request<void>(`/groups/${groupId}/members/${userId}`, { method: "DELETE" }),
 
+  renameGroup: (groupId: string, name: string) =>
+    request<Group>(`/groups/${groupId}`, { method: "PATCH", body: { name } }).then((g) => {
+      notifyGroupsChanged();
+      return g;
+    }),
+
+  regenerateInviteCode: (groupId: string) =>
+    request<Group>(`/groups/${groupId}/regenerate-invite`, { method: "POST" }),
+
+  deleteGroup: (groupId: string) =>
+    request<void>(`/groups/${groupId}`, { method: "DELETE" }).then(() => notifyGroupsChanged()),
+
+  listCategories: (groupId: string) => request<GroupCategory[]>(`/groups/${groupId}/categories`),
+
+  createCategory: (groupId: string, name: string) =>
+    request<GroupCategory>(`/groups/${groupId}/categories`, { method: "POST", body: { name } }),
+
+  deleteCategory: (groupId: string, categoryId: string) =>
+    request<void>(`/groups/${groupId}/categories/${categoryId}`, { method: "DELETE" }),
+
   getMonthlyReport: (groupId: string, month: string) =>
     request<MonthlyReport>(`/groups/${groupId}/report?month=${month}`),
+
+  listNotifications: () => request<Notification[]>("/notifications"),
+
+  getUnreadNotificationCount: () => request<{ count: number }>("/notifications/unread-count"),
+
+  markNotificationRead: (id: string) => request<void>(`/notifications/${id}/read`, { method: "POST" }),
+
+  markAllNotificationsRead: () => request<void>("/notifications/read-all", { method: "POST" }),
 
   createExpense: (
     groupId: string,

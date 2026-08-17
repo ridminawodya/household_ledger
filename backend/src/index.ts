@@ -9,6 +9,7 @@ import aiRouter from "./routes/ai";
 import adminRouter from "./routes/admin";
 import billingRouter from "./routes/billing";
 import billingWebhookRouter from "./routes/billingWebhook";
+import notificationsRouter from "./routes/notifications";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/chores", choresRouter);
 app.use("/ai", aiRouter);
 app.use("/admin", adminRouter);
 app.use("/billing", billingRouter);
+app.use("/notifications", notificationsRouter);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 

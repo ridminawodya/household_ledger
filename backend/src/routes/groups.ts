@@ -13,6 +13,8 @@ function generateInviteCode(): string {
   return crypto.randomBytes(4).toString("hex").toUpperCase();
 }
 
+const DEFAULT_CATEGORIES = ["groceries", "food", "utilities", "rent", "transport", "other"];
+
 const createGroupSchema = z.object({
   name: z.string().trim().min(1, "Group name is required"),
 });
@@ -52,6 +54,9 @@ router.post("/", async (req: AuthedRequest, res) => {
       createdById: req.userId!,
       members: {
         create: { userId: req.userId! },
+      },
+      categories: {
+        create: DEFAULT_CATEGORIES.map((name) => ({ name })),
       },
     },
     include: { members: true },
@@ -221,6 +226,131 @@ router.delete("/:id/members/:userId", async (req: AuthedRequest, res) => {
   if (result) {
     return res.status(409).json(result);
   }
+
+  res.status(204).send();
+});
+
+const renameGroupSchema = z.object({
+  name: z.string().trim().min(1, "Group name is required"),
+});
+
+router.patch("/:id", async (req: AuthedRequest, res) => {
+  const parsed = renameGroupSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const group = await prisma.group.findUnique({ where: { id: req.params.id } });
+  if (!group) {
+    return res.status(404).json({ error: "Group not found" });
+  }
+  if (group.createdById !== req.userId) {
+    return res.status(403).json({ error: "Only the group creator can rename the group" });
+  }
+
+  const updated = await prisma.group.update({
+    where: { id: group.id },
+    data: { name: parsed.data.name },
+  });
+
+  res.json(updated);
+});
+
+router.post("/:id/regenerate-invite", async (req: AuthedRequest, res) => {
+  const group = await prisma.group.findUnique({ where: { id: req.params.id } });
+  if (!group) {
+    return res.status(404).json({ error: "Group not found" });
+  }
+  if (group.createdById !== req.userId) {
+    return res.status(403).json({ error: "Only the group creator can regenerate the invite code" });
+  }
+
+  let inviteCode = generateInviteCode();
+  for (let attempts = 0; attempts < 5; attempts++) {
+    const existing = await prisma.group.findUnique({ where: { inviteCode } });
+    if (!existing) break;
+    inviteCode = generateInviteCode();
+  }
+
+  const updated = await prisma.group.update({
+    where: { id: group.id },
+    data: { inviteCode },
+  });
+
+  res.json(updated);
+});
+
+router.delete("/:id", async (req: AuthedRequest, res) => {
+  const group = await prisma.group.findUnique({ where: { id: req.params.id } });
+  if (!group) {
+    return res.status(404).json({ error: "Group not found" });
+  }
+  if (group.createdById !== req.userId) {
+    return res.status(403).json({ error: "Only the group creator can delete the group" });
+  }
+
+  await prisma.group.delete({ where: { id: group.id } });
+
+  res.status(204).send();
+});
+
+const createCategorySchema = z.object({
+  name: z.string().trim().min(1, "Category name is required").toLowerCase(),
+});
+
+router.get("/:id/categories", async (req: AuthedRequest, res) => {
+  const membership = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: req.userId!, groupId: req.params.id } },
+  });
+  if (!membership) {
+    return res.status(403).json({ error: "You are not a member of this group" });
+  }
+
+  const categories = await prisma.groupCategory.findMany({
+    where: { groupId: req.params.id },
+    orderBy: { name: "asc" },
+  });
+
+  res.json(categories);
+});
+
+router.post("/:id/categories", async (req: AuthedRequest, res) => {
+  const parsed = createCategorySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const membership = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: req.userId!, groupId: req.params.id } },
+  });
+  if (!membership) {
+    return res.status(403).json({ error: "You are not a member of this group" });
+  }
+
+  try {
+    const category = await prisma.groupCategory.create({
+      data: { groupId: req.params.id, name: parsed.data.name },
+    });
+    res.status(201).json(category);
+  } catch {
+    res.status(409).json({ error: "This category already exists" });
+  }
+});
+
+router.delete("/:id/categories/:categoryId", async (req: AuthedRequest, res) => {
+  const membership = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: req.userId!, groupId: req.params.id } },
+  });
+  if (!membership) {
+    return res.status(403).json({ error: "You are not a member of this group" });
+  }
+
+  const category = await prisma.groupCategory.findUnique({ where: { id: req.params.categoryId } });
+  if (!category || category.groupId !== req.params.id) {
+    return res.status(404).json({ error: "Category not found" });
+  }
+
+  await prisma.groupCategory.delete({ where: { id: category.id } });
 
   res.status(204).send();
 });

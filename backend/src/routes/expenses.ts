@@ -6,6 +6,7 @@ import { requireAuth, type AuthedRequest } from "../middleware/requireAuth";
 import { settleGroup } from "../lib/settleUp";
 import { uploadReceipt } from "../lib/supabaseStorage";
 import { addRecurrenceInterval, isRecurrenceFrequency, RECURRENCE_FREQUENCIES } from "../lib/recurrence";
+import { notifyGroupMembers } from "../lib/notifications";
 
 const router = Router();
 router.use(requireAuth);
@@ -55,7 +56,10 @@ router.post("/", async (req: AuthedRequest, res) => {
     return res.status(403).json({ error: "You are not a member of this group" });
   }
 
-  const members = await prisma.groupMember.findMany({ where: { groupId } });
+  const [members, user] = await Promise.all([
+    prisma.groupMember.findMany({ where: { groupId } }),
+    prisma.user.findUnique({ where: { id: req.userId! } }),
+  ]);
   const shares = splitEvenly(amountCents, members.map((m) => m.userId));
 
   const expense = await prisma.expense.create({
@@ -77,6 +81,13 @@ router.post("/", async (req: AuthedRequest, res) => {
       },
     },
     include: { shares: true },
+  });
+
+  await notifyGroupMembers(groupId, req.userId!, {
+    type: "expense_added",
+    actorName: user?.name ?? "Someone",
+    message: description,
+    amountCents,
   });
 
   res.status(201).json(expense);

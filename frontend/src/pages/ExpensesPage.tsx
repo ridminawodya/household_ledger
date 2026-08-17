@@ -5,13 +5,14 @@ import {
   api,
   ApiError,
   type Expense,
+  type GroupCategory,
   type GroupDetail,
   type ParsedExpense,
   type RecurrenceFrequency,
 } from "../lib/api";
 import { centsToDollarsInput, dollarsToCents, formatCents } from "../lib/money";
 
-const CATEGORIES = ["groceries", "food", "utilities", "rent", "transport", "other"];
+const FALLBACK_CATEGORIES = ["groceries", "food", "utilities", "rent", "transport", "other"];
 const RECURRENCE_OPTIONS: { value: RecurrenceFrequency | ""; label: string }[] = [
   { value: "", label: "Doesn't repeat" },
   { value: "weekly", label: "Repeats weekly" },
@@ -35,16 +36,25 @@ export default function ExpensesPage() {
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
+  const [categories, setCategories] = useState<GroupCategory[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+
+  const categoryNames = categories.length > 0 ? categories.map((c) => c.name) : FALLBACK_CATEGORIES;
 
   // Manual add form
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState("");
   const [recurrence, setRecurrence] = useState<RecurrenceFrequency | "">("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+
+  // Filters
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterMember, setFilterMember] = useState("");
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
 
   // AI free-text form
   const [aiText, setAiText] = useState("");
@@ -57,10 +67,16 @@ export default function ExpensesPage() {
   async function loadAll() {
     if (!groupId) return;
     try {
-      const [g, e] = await Promise.all([api.getGroup(groupId), api.listExpenses(groupId)]);
+      const [g, e, cats] = await Promise.all([
+        api.getGroup(groupId),
+        api.listExpenses(groupId),
+        api.listCategories(groupId),
+      ]);
       setGroup(g);
       setExpenses(e);
       setViewingExpense((prev) => (prev ? e.find((x) => x.id === prev.id) ?? null : null));
+      setCategories(cats);
+      setCategory((prev) => prev || cats[0]?.name || FALLBACK_CATEGORIES[0]);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Failed to load expenses");
     }
@@ -91,7 +107,7 @@ export default function ExpensesPage() {
       await api.createExpense(groupId, description, cents, category, recurrence || undefined);
       setDescription("");
       setAmount("");
-      setCategory(CATEGORIES[0]);
+      setCategory(categoryNames[0]);
       setRecurrence("");
       await loadAll();
     } catch (err) {
@@ -269,7 +285,7 @@ export default function ExpensesPage() {
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
               >
-                {CATEGORIES.map((c) => (
+                {categoryNames.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
@@ -301,13 +317,83 @@ export default function ExpensesPage() {
         {/* Expense list */}
         <section className="bg-white rounded-lg shadow p-6">
           <h2 className="text-sm font-semibold text-gray-900 mb-3">All expenses</h2>
+
+          {expenses !== null && expenses.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-navy-500"
+              >
+                <option value="">All categories</option>
+                {categoryNames.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={filterMember}
+                onChange={(e) => setFilterMember(e.target.value)}
+                className="rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-navy-500"
+              >
+                <option value="">Anyone</option>
+                {group?.members.map((m) => (
+                  <option key={m.userId} value={m.userId}>
+                    {m.user.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={filterFrom}
+                onChange={(e) => setFilterFrom(e.target.value)}
+                title="From date"
+                className="rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-navy-500"
+              />
+              <input
+                type="date"
+                value={filterTo}
+                onChange={(e) => setFilterTo(e.target.value)}
+                title="To date"
+                className="rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-navy-500"
+              />
+              {(filterCategory || filterMember || filterFrom || filterTo) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterCategory("");
+                    setFilterMember("");
+                    setFilterFrom("");
+                    setFilterTo("");
+                  }}
+                  className="col-span-2 sm:col-span-4 text-xs text-navy-600 hover:underline text-left"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
+
           {expenses === null && !loadError && <p className="text-sm text-gray-500">Loading…</p>}
           {expenses !== null && expenses.length === 0 && (
             <p className="text-sm text-gray-500">No expenses yet — add your first one above.</p>
           )}
-          {expenses !== null && expenses.length > 0 && (
-            <ul className="divide-y divide-gray-100">
-              {expenses.map((expense) => (
+          {(() => {
+            if (expenses === null || expenses.length === 0) return null;
+            const filtered = expenses.filter((e) => {
+              if (filterCategory && e.category !== filterCategory) return false;
+              if (filterMember && e.paidById !== filterMember) return false;
+              if (filterFrom && e.createdAt.slice(0, 10) < filterFrom) return false;
+              if (filterTo && e.createdAt.slice(0, 10) > filterTo) return false;
+              return true;
+            });
+            if (filtered.length === 0) {
+              return <p className="text-sm text-gray-500">No expenses match these filters.</p>;
+            }
+            return (
+              <ul className="divide-y divide-gray-100">
+                {filtered.map((expense) => (
                 <li key={expense.id} className="py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
@@ -336,9 +422,10 @@ export default function ExpensesPage() {
                     </button>
                   </div>
                 </li>
-              ))}
-            </ul>
-          )}
+                ))}
+              </ul>
+            );
+          })()}
         </section>
       </div>
 
@@ -347,6 +434,7 @@ export default function ExpensesPage() {
           expense={viewingExpense}
           memberName={memberName}
           canManage={viewingExpense.paidById === user?.id}
+          categoryNames={categoryNames}
           onClose={() => setViewingExpense(null)}
           onChanged={loadAll}
         />
@@ -359,12 +447,14 @@ function ExpenseDetailModal({
   expense,
   memberName,
   canManage,
+  categoryNames,
   onClose,
   onChanged,
 }: {
   expense: Expense;
   memberName: (userId: string) => string;
   canManage: boolean;
+  categoryNames: string[];
   onClose: () => void;
   onChanged: () => Promise<void>;
 }) {
@@ -571,7 +661,7 @@ function ExpenseDetailModal({
                 onChange={(e) => setEditCategory(e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               >
-                {CATEGORIES.map((c) => (
+                {categoryNames.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>

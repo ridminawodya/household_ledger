@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 import { api, GROUPS_CHANGED_EVENT, type Group } from "../lib/api";
+import NotificationBell from "./NotificationBell";
 
 const groupNavLinkClass = ({ isActive }: { isActive: boolean }) =>
   `px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
@@ -71,6 +72,7 @@ export default function AppLayout() {
                 Admin
               </Link>
             )}
+            {!user?.isAdmin && <NotificationBell />}
             {!user?.isAdmin && (
               <Link
                 to="/billing"

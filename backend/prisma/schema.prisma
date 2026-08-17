@@ -24,6 +24,7 @@ model User {
   groupsCreated     Group[]          @relation("GroupCreatedBy")
   settlementsPaid   Settlement[]     @relation("SettlementFrom")
   settlementsRecv   Settlement[]     @relation("SettlementTo")
+  notifications     Notification[]
 }
 
 model Group {
@@ -38,6 +39,35 @@ model Group {
   expenses    Expense[]
   chores      Chore[]
   settlements Settlement[]
+  categories  GroupCategory[]
+  notifications Notification[]
+}
+
+model GroupCategory {
+  id      String @id @default(uuid())
+  groupId String
+  name    String
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, name])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  groupId   String
+  type      String
+  actorName String
+  message   String
+  amountCents Int?
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
 }
 
 model GroupMember {
