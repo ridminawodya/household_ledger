@@ -4,7 +4,7 @@ const FEATURES = [
   {
     title: "Split expenses, evenly and fairly",
     description:
-      "Log what you paid — rent, groceries, utilities — and it's automatically split across everyone in the group. Every amount is stored as integer cents, so there's never a rounding surprise.",
+      "Log what you paid — rent, groceries, utilities — and it's automatically split across everyone in the group. Attach a receipt photo, set it to repeat monthly, or edit it later — every amount is stored as integer cents, so there's never a rounding surprise.",
     icon: "💸",
   },
   {
@@ -20,10 +20,22 @@ const FEATURES = [
     icon: "✨",
   },
   {
-    title: "Chores, tracked like they matter",
+    title: "Chores that rotate themselves",
     description:
-      "Assign chores with due dates, see whose turn it is at a glance, and mark things done. No more \"whose turn is it to take out the trash\" arguments.",
+      "Assign chores with due dates, see whose turn it is at a glance, and mark things done. Turn on auto-assign and the next person in the household automatically gets the next cycle — no more \"whose turn is it to take out the trash\" arguments.",
     icon: "🧹",
+  },
+  {
+    title: "Know when something happens",
+    description:
+      "In-app notifications when a roommate logs an expense or hands you a chore, so nothing sits unnoticed until settle-up day.",
+    icon: "🔔",
+  },
+  {
+    title: "A monthly paper trail",
+    description:
+      "Export a PDF of everything that happened in your household for any given month — every expense, every payment, every completed chore — in one download.",
+    icon: "📄",
   },
 ];
 
@@ -84,8 +96,9 @@ export default function LandingPage() {
           >
             A shared expense-and-chore tracker for roommates — combining money and
             chores in one place, with an AI assistant that turns "I paid $85 for
-            groceries" into a structured entry, and an algorithm that finds the
-            fewest payments needed to settle up.
+            groceries" into a structured entry, an algorithm that finds the
+            fewest payments needed to settle up, and self-rotating chores so
+            nobody has to remember whose turn it is.
           </p>
           <div
             className="mt-8 flex items-center justify-center gap-3 animate-slide-up"
