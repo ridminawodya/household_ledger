@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth";
 import { FREE_GROUP_LIMIT, FREE_MEMBER_LIMIT, isPremiumPlan } from "../lib/plans";
 import { computeBalances } from "../lib/settleUp";
+import { isAdminEmail } from "../lib/auth";
 
 const router = Router();
 router.use(requireAuth);
@@ -120,7 +121,13 @@ router.get("/:id", async (req: AuthedRequest, res) => {
     where: { userId_groupId: { userId: req.userId!, groupId: req.params.id } },
   });
   if (!membership) {
-    return res.status(403).json({ error: "You are not a member of this group" });
+    const requester = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { email: true },
+    });
+    if (!requester || !isAdminEmail(requester.email)) {
+      return res.status(403).json({ error: "You are not a member of this group" });
+    }
   }
 
   const group = await prisma.group.findUnique({
@@ -303,7 +310,13 @@ router.get("/:id/categories", async (req: AuthedRequest, res) => {
     where: { userId_groupId: { userId: req.userId!, groupId: req.params.id } },
   });
   if (!membership) {
-    return res.status(403).json({ error: "You are not a member of this group" });
+    const requester = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { email: true },
+    });
+    if (!requester || !isAdminEmail(requester.email)) {
+      return res.status(403).json({ error: "You are not a member of this group" });
+    }
   }
 
   const categories = await prisma.groupCategory.findMany({

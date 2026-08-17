@@ -156,6 +156,7 @@ export default function GroupDetailPage() {
   }
 
   const isCreator = group !== null && group.createdById === user?.id;
+  const isMember = group !== null && group.members.some((m) => m.userId === user?.id);
 
   return (
     <div className="px-4 py-8">
@@ -165,6 +166,12 @@ export default function GroupDetailPage() {
 
         {group && (
           <div className="space-y-6">
+            {!isMember && (
+              <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                Viewing as admin — you're not a member of this group, so member-only actions are hidden.
+              </div>
+            )}
+
             <div>
               {!renaming ? (
                 <div className="flex items-center gap-2 mb-1">
@@ -241,7 +248,7 @@ export default function GroupDetailPage() {
                   ))}
                 </ul>
 
-                {!isCreator && (
+                {isMember && !isCreator && (
                   <button
                     type="button"
                     onClick={() => {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -115,9 +116,20 @@ function PaginationControls({
   );
 }
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({
+  title,
+  children,
+  staggerIndex,
+}: {
+  title: string;
+  children: React.ReactNode;
+  staggerIndex?: number;
+}) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div
+      className="bg-white rounded-lg shadow p-6 animate-slide-up stagger-item"
+      style={staggerIndex !== undefined ? ({ "--stagger-index": staggerIndex } as React.CSSProperties) : undefined}
+    >
       <h2 className="text-sm font-semibold text-gray-900 mb-3">{title}</h2>
       <div style={{ width: "100%", height: 220 }}>{children}</div>
     </div>
@@ -270,7 +282,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <ChartCard title="Signups (last 30 days)">
+          <ChartCard title="Signups (last 30 days)" staggerIndex={0}>
             <ResponsiveContainer>
               <LineChart data={trends.signups} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <CartesianGrid stroke={GRID} vertical={false} />
@@ -287,12 +299,21 @@ export default function AdminDashboardPage() {
                   formatter={(value) => [Number(value), "Signups"]}
                   contentStyle={{ fontSize: 12, borderRadius: 6 }}
                 />
-                <Line type="monotone" dataKey="count" stroke={BLUE} strokeWidth={2} dot={{ r: 3 }} />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke={BLUE}
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
+                  animationDuration={600}
+                  animationEasing="ease-out"
+                />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          <ChartCard title="Expense volume (last 30 days)">
+          <ChartCard title="Expense volume (last 30 days)" staggerIndex={1}>
             <ResponsiveContainer>
               <BarChart data={trends.expenses} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <CartesianGrid stroke={GRID} vertical={false} />
@@ -314,13 +335,20 @@ export default function AdminDashboardPage() {
                   labelFormatter={(v) => formatShortDate(String(v))}
                   formatter={(value) => [formatCents(Number(value)), "Volume"]}
                   contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                  cursor={{ fill: "rgba(235, 104, 52, 0.08)" }}
                 />
-                <Bar dataKey="totalCents" fill={ORANGE} radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="totalCents"
+                  fill={ORANGE}
+                  radius={[4, 4, 0, 0]}
+                  animationDuration={600}
+                  animationEasing="ease-out"
+                />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          <ChartCard title="Chores completed (last 30 days)">
+          <ChartCard title="Chores completed (last 30 days)" staggerIndex={2}>
             <ResponsiveContainer>
               <BarChart data={trends.choresCompleted} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <CartesianGrid stroke={GRID} vertical={false} />
@@ -336,8 +364,15 @@ export default function AdminDashboardPage() {
                   labelFormatter={(v) => formatShortDate(String(v))}
                   formatter={(value) => [Number(value), "Completed"]}
                   contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                  cursor={{ fill: "rgba(27, 175, 122, 0.08)" }}
                 />
-                <Bar dataKey="count" fill={AQUA} radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="count"
+                  fill={AQUA}
+                  radius={[4, 4, 0, 0]}
+                  animationDuration={600}
+                  animationEasing="ease-out"
+                />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -359,6 +394,8 @@ export default function AdminDashboardPage() {
                       innerRadius={40}
                       outerRadius={78}
                       paddingAngle={2}
+                      animationDuration={600}
+                      animationEasing="ease-out"
                     >
                       {categories.map((c, i) => (
                         <Cell key={c.category} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
@@ -406,7 +443,14 @@ export default function AdminDashboardPage() {
                 <tbody className="divide-y divide-gray-100">
                   {topGroups.map((g) => (
                     <tr key={g.groupId} className="transition-colors hover:bg-gray-50">
-                      <td className="py-2 text-gray-900">{g.groupName}</td>
+                      <td className="py-2 text-gray-900">
+                        <Link
+                          to={`/groups/${g.groupId}`}
+                          className="text-navy-700 transition-colors hover:text-navy-500 hover:underline"
+                        >
+                          {g.groupName}
+                        </Link>
+                      </td>
                       <td className="py-2 text-right text-gray-500">{g.expenseCount}</td>
                       <td className="py-2 text-right font-medium text-gray-900">{formatCents(g.totalCents)}</td>
                     </tr>
@@ -580,7 +624,14 @@ export default function AdminDashboardPage() {
                   <tbody className="divide-y divide-gray-100">
                     {groups.map((g) => (
                       <tr key={g.id} className="transition-colors hover:bg-gray-50">
-                        <td className="py-2 text-gray-900">{g.name}</td>
+                        <td className="py-2 text-gray-900">
+                          <Link
+                            to={`/groups/${g.id}`}
+                            className="text-navy-700 transition-colors hover:text-navy-500 hover:underline"
+                          >
+                            {g.name}
+                          </Link>
+                        </td>
                         <td className="py-2 text-gray-500">{formatShortDate(g.createdAt.slice(0, 10))}</td>
                         <td className="py-2 text-right text-gray-900">{g.memberCount}</td>
                         <td className="py-2 text-right text-gray-900">{g.expenseCount}</td>
