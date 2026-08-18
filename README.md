@@ -22,12 +22,15 @@ Built as a portfolio project to demonstrate full-stack fundamentals: relational 
 | AI integration | Claude API (`@anthropic-ai/sdk`), model `claude-opus-5` | Structured extraction from free text |
 | Billing | Lemon Squeezy (hosted checkout + webhooks) | Merchant-of-record subscription billing; chosen over Stripe because Stripe doesn't support account holders in every country this project needed |
 | Mobile | Capacitor (Android) | Wraps the deployed web app in a native Android shell; OAuth and checkout are routed through the system browser rather than the in-app WebView, since Google blocks embedded WebViews for its login flow |
+| Transactional email | Resend | Password-reset links |
 | Deployment | Vercel (frontend) + Railway (backend) + Supabase (Postgres + Storage) | Free-tier friendly, standard for portfolio projects |
 
 ## 2. What it does
 
 **Core (free tier)**
 - Sign up with email/password, or sign in with Google (both resolve to the same account if the email matches)
+- Forgot-password flow: emailed reset link (1-hour expiry, single-use token), no account enumeration
+- Delete your own account, guarded so a group creator or anyone with an unsettled balance can't disappear from the ledger
 - Create or join a household group via a short invite code (free tier: 1 group, 4 members per group)
 - Log an expense (amount, description, category) and it's split evenly among group members
 - Log an expense in plain English — e.g. *"paid $85 for groceries and pizza last night"* — premium-gated; Claude parses it into a structured entry for the user to review and confirm before it's saved
@@ -44,6 +47,7 @@ Built as a portfolio project to demonstrate full-stack fundamentals: relational 
 **Premium**
 - Unlimited groups and members
 - AI-powered expense parsing
+- Cancel anytime, in-app — immediately downgrades to free rather than waiting on the next billing webhook
 
 **Admin** (email allowlisted via `ADMIN_EMAILS`)
 - Full-system dashboard: signups/expense/chore trend charts, expense breakdown by category, top groups/users by spend, paginated user and group directories, recent activity feed, premium conversion stats
@@ -114,9 +118,13 @@ Two independent sign-in paths that converge on the same `User` record and JWT se
 
 Admin access is not a role on the `User` model — it's derived at request time from `ADMIN_EMAILS`, a comma-separated allowlist in the backend environment (`backend/src/lib/auth.ts`'s `isAdminEmail`). An admin login redirects to `/admin` instead of the regular groups view.
 
+**Password reset**: `POST /auth/forgot-password` issues a random 32-byte token, stores only its SHA-256 hash (`PasswordResetToken.tokenHash`) with a 1-hour expiry, and emails the raw token as a link via Resend (`backend/src/lib/email.ts`). The endpoint always returns the same generic message whether or not the email is registered, to avoid leaking which addresses have accounts. `POST /auth/reset-password` re-hashes the submitted token and looks it up, rejecting anything expired, already used, or unrecognized.
+
+**Account deletion**: `DELETE /auth/me` refuses to proceed if the user is still the creator of any group (delete or transfer it first) or has a nonzero balance in any group they belong to (same guard `groups.ts` uses for leaving a group), then cancels their Lemon Squeezy subscription if they have one before deleting the row — cascading deletes handle the rest via Prisma's `onDelete: Cascade` relations.
+
 ## 7. Billing
 
-`POST /billing/checkout` creates a Lemon Squeezy hosted-checkout session (test mode) and redirects the user there; `POST /billing/webhook` verifies the request's HMAC signature and flips `User.plan` based on the subscription event. Premium status gates group/member limits (checked in `groups.ts`) and AI parsing (checked in `ai.ts`).
+`POST /billing/checkout` creates a Lemon Squeezy hosted-checkout session (test mode) and redirects the user there; `POST /billing/webhook` verifies the request's HMAC signature, flips `User.plan` based on the subscription event, and persists the subscription's own id (`User.lemonSqueezySubscriptionId`) so it can be cancelled later. `POST /billing/cancel` calls Lemon Squeezy's subscription-cancellation API with that stored id and downgrades the user immediately in the same request, rather than waiting for the webhook to catch up. Premium status gates group/member limits (checked in `groups.ts`) and AI parsing (checked in `ai.ts`).
 
 Stripe was the original choice but doesn't support account holders in every country this project needed, so billing runs through Lemon Squeezy, a merchant-of-record platform with broader country coverage.
 
@@ -134,6 +142,9 @@ All authenticated routes expect `Authorization: Bearer <token>`.
 | GET | `/me` | ✓ | Resolve the current JWT into a user profile |
 | GET | `/google` | – | Redirects to Google's OAuth consent screen |
 | GET | `/google/callback` | – | Google OAuth callback; issues a JWT and redirects to the frontend |
+| POST | `/forgot-password` | – | Emails a password-reset link if the address has a password-based account (always returns a generic success message) |
+| POST | `/reset-password` | – | Consumes a reset token, sets a new password |
+| DELETE | `/me` | ✓ | Delete the current user's account (blocked if they created a group, or have an unsettled balance anywhere) |
 
 </details>
 
@@ -194,6 +205,7 @@ All authenticated routes expect `Authorization: Bearer <token>`.
 |---|---|---|---|
 | POST | `/ai/parse-expense` | ✓ (premium) | Parse free text into a structured expense |
 | POST | `/billing/checkout` | ✓ | Create a Lemon Squeezy checkout session |
+| POST | `/billing/cancel` | ✓ | Cancel the current user's subscription via the Lemon Squeezy API, downgrades to free immediately |
 | POST | `/billing/webhook` | – (HMAC-verified) | Lemon Squeezy subscription events |
 | GET | `/notifications` | ✓ | List the current user's notifications |
 | GET | `/notifications/unread-count` | ✓ | Unread count for the bell badge |
@@ -224,7 +236,8 @@ household-ledger/
 │       │   ├── recurrence.ts      # shared recurring-expense / chore-rotation math
 │       │   ├── notifications.ts   # in-app notification creation helpers
 │       │   ├── supabaseStorage.ts # receipt photo uploads
-│       │   ├── lemonsqueezy.ts    # checkout session creation
+│       │   ├── lemonsqueezy.ts    # checkout session creation + subscription cancellation
+│       │   ├── email.ts           # password-reset emails (Resend)
 │       │   ├── webhookSignature.ts
 │       │   ├── plans.ts           # free/premium limits
 │       │   ├── auth.ts            # JWT + bcrypt helpers, admin allowlist
@@ -233,7 +246,7 @@ household-ledger/
 │       │   ├── requireAuth.ts
 │       │   └── requireAdmin.ts
 │       └── routes/
-│           ├── auth.ts            # signup/login/me + Google OAuth
+│           ├── auth.ts            # signup/login/me + Google OAuth + password reset + account deletion
 │           ├── groups.ts          # groups, settings, categories, monthly report
 │           ├── expenses.ts        # expenses, receipts, settle-up, settlements
 │           ├── chores.ts
@@ -264,12 +277,14 @@ household-ledger/
         └── pages/
             ├── LandingPage.tsx
             ├── LoginPage.tsx / SignupPage.tsx
+            ├── ForgotPasswordPage.tsx / ResetPasswordPage.tsx
             ├── GoogleCallbackPage.tsx
             ├── GroupsPage.tsx / GroupDetailPage.tsx  # detail page = overview, settings, categories, monthly report
             ├── ExpensesPage.tsx
             ├── SettleUpPage.tsx
             ├── ChoresPage.tsx
             ├── BillingPage.tsx
+            ├── AccountPage.tsx    # profile summary + account deletion
             └── AdminDashboardPage.tsx
 ```
 
@@ -300,6 +315,7 @@ Each of these degrades gracefully when unset — the app runs fully without any 
 - **Claude API** (`ANTHROPIC_API_KEY`) — powers AI expense parsing.
 - **Lemon Squeezy** (`LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID`, `LEMONSQUEEZY_PREMIUM_VARIANT_ID`, `LEMONSQUEEZY_WEBHOOK_SECRET`) — powers premium checkout. Test mode works end to end with no real charges.
 - **Supabase Storage** (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_RECEIPTS_BUCKET`) — powers receipt photo uploads. Needs a public bucket created in the Supabase dashboard.
+- **Resend** (`RESEND_API_KEY`, optionally `EMAIL_FROM`) — powers password-reset emails. Works out of the box against Resend's shared `onboarding@resend.dev` sender, which can only deliver to the email your Resend account is registered with until you verify your own sending domain.
 - **`ADMIN_EMAILS`** — comma-separated list of emails granted access to `/admin`.
 
 ## 11. Android app (Capacitor)
@@ -322,4 +338,6 @@ From Android Studio, run the app on an emulator or physical device via the ▶ R
 
 ## 12. Status
 
-The application is feature-complete and deployed: full auth (password + Google), groups with settings and custom categories, expenses (even-split, editing, receipts, recurrence), the settle-up algorithm with payment confirmation, chores with auto-rotation, AI-assisted expense entry, premium billing, in-app notifications, monthly PDF reports, an admin analytics dashboard, and an Android app wrapping the deployed frontend. Backend runs on Railway's free tier, which can cold-start under a burst of concurrent requests — the admin dashboard's initial load retries once to absorb this.
+The application is feature-complete and deployed: full auth (password + Google + forgot/reset password + account deletion), groups with settings and custom categories, expenses (even-split, editing, receipts, recurrence), the settle-up algorithm with payment confirmation, chores with auto-rotation, AI-assisted expense entry, premium billing (upgrade and in-app cancellation), in-app notifications, monthly PDF reports, an admin analytics dashboard, and an Android app wrapping the deployed frontend. Backend runs on Railway's free tier, which can cold-start under a burst of concurrent requests — the admin dashboard's initial load retries once to absorb this.
+
+The Android app's navigation shell was redesigned around native-app conventions rather than a responsive website: the landing page is a full-screen, auto-advancing onboarding carousel instead of a scrolled marketing page, and the authenticated app shell (`AppLayout.tsx`) uses a bottom tab bar for primary navigation with a compact top-bar account menu, instead of a row of text links.
