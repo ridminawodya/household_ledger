@@ -302,6 +302,18 @@ export const api = {
 
   getMe: () => request<{ user: User }>("/auth/me"),
 
+  deleteAccount: () => request<void>("/auth/me", { method: "DELETE" }),
+
+  forgotPassword: (email: string) =>
+    request<{ message: string }>("/auth/forgot-password", { method: "POST", body: { email }, auth: false }),
+
+  resetPassword: (token: string, password: string) =>
+    request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: { token, password },
+      auth: false,
+    }),
+
   googleLoginUrl: (native = false) => `${API_URL}/auth/google${native ? "?native=1" : ""}`,
 
   createGroup: (name: string) =>
@@ -422,4 +434,6 @@ export const api = {
   getAdminGroups: (page = 1) => request<AdminGroupsPage>(`/admin/groups?page=${page}`),
 
   createCheckout: () => request<{ url: string }>("/billing/checkout", { method: "POST" }),
+
+  cancelSubscription: () => request<{ message: string }>("/billing/cancel", { method: "POST" }),
 };

@@ -16,6 +16,7 @@ model User {
   createdAt      DateTime  @default(now())
   plan           String    @default("free")
   premiumSince   DateTime?
+  lemonSqueezySubscriptionId String?
 
   memberships       GroupMember[]
   expensesPaid      Expense[]        @relation("ExpensePaidBy")
@@ -25,6 +26,20 @@ model User {
   settlementsPaid   Settlement[]     @relation("SettlementFrom")
   settlementsRecv   Settlement[]     @relation("SettlementTo")
   notifications     Notification[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Group {

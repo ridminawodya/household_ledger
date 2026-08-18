@@ -4,9 +4,12 @@ import { api, ApiError } from "../lib/api";
 import { openExternalUrl } from "../lib/nativeBrowser";
 
 export default function BillingPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const isPremium = user?.plan === "premium";
 
@@ -20,6 +23,20 @@ export default function BillingPage() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to start checkout");
       setLoading(false);
+    }
+  }
+
+  async function handleCancel() {
+    setCancelError(null);
+    setCancelling(true);
+    try {
+      await api.cancelSubscription();
+      await refreshUser();
+      setConfirmingCancel(false);
+    } catch (err) {
+      setCancelError(err instanceof ApiError ? err.message : "Failed to cancel subscription");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -75,9 +92,16 @@ export default function BillingPage() {
               <li>AI-powered expense parsing</li>
             </ul>
             {isPremium ? (
-              <p className="text-xs text-gray-500">
-                Manage or cancel your subscription from the receipt email Lemon Squeezy sent you.
-              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setCancelError(null);
+                  setConfirmingCancel(true);
+                }}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                Cancel subscription
+              </button>
             ) : (
               <button
                 type="button"
@@ -91,6 +115,42 @@ export default function BillingPage() {
           </div>
         </div>
       </div>
+
+      {confirmingCancel && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-sm rounded-lg bg-white shadow-xl p-6 animate-scale-in">
+            <h2 className="text-base font-semibold text-gray-900 mb-2">Cancel your subscription?</h2>
+            <p className="text-sm text-gray-500 mb-5">
+              You'll lose access to unlimited groups/members and AI-powered expense parsing immediately.
+            </p>
+
+            {cancelError && <p className="text-sm text-red-600 mb-4">{cancelError}</p>}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmingCancel(false)}
+                disabled={cancelling}
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+              >
+                Keep subscription
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-red-500 active:scale-[0.98] disabled:opacity-50"
+              >
+                {cancelling ? "Cancelling…" : "Cancel subscription"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

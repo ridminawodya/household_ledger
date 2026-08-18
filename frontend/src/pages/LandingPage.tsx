@@ -1,190 +1,185 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
-const FEATURES = [
+const SLIDES = [
   {
+    icon: "💸",
     title: "Split expenses, evenly and fairly",
     description:
-      "Log what you paid — rent, groceries, utilities — and it's automatically split across everyone in the group. Attach a receipt photo, set it to repeat monthly, or edit it later — every amount is stored as integer cents, so there's never a rounding surprise.",
-    icon: "💸",
+      "Log what you paid and it's automatically split across the group. Every amount is stored as integer cents, so there's never a rounding surprise.",
   },
   {
-    title: "Settle up in the fewest payments possible",
-    description:
-      "Not \"everyone pays everyone.\" A real debt-simplification algorithm nets every balance and greedily matches the largest creditor with the largest debtor, so N people settle in at most N−1 transactions — the mathematical minimum.",
     icon: "🧮",
+    title: "Settle up in the fewest payments",
+    description:
+      "Not \"everyone pays everyone.\" A debt-simplification algorithm nets every balance so the group settles in the minimum number of transactions.",
   },
   {
+    icon: "✨",
     title: "Describe an expense in plain English",
     description:
-      "Type \"paid $85 for groceries and pizza last night\" and Claude parses it into a structured entry — amount, category, description — for you to review and confirm before anything is saved. The AI never writes to your ledger on its own.",
-    icon: "✨",
+      "Type \"paid $85 for groceries last night\" and AI turns it into a structured entry for you to review before anything is saved.",
   },
   {
+    icon: "🧹",
     title: "Chores that rotate themselves",
     description:
-      "Assign chores with due dates, see whose turn it is at a glance, and mark things done. Turn on auto-assign and the next person in the household automatically gets the next cycle — no more \"whose turn is it to take out the trash\" arguments.",
-    icon: "🧹",
-  },
-  {
-    title: "Know when something happens",
-    description:
-      "In-app notifications when a roommate logs an expense or hands you a chore, so nothing sits unnoticed until settle-up day.",
-    icon: "🔔",
-  },
-  {
-    title: "A monthly paper trail",
-    description:
-      "Export a PDF of everything that happened in your household for any given month — every expense, every payment, every completed chore — in one download.",
-    icon: "📄",
+      "Assign chores with due dates. Turn on auto-assign and the next person automatically gets the next cycle.",
   },
 ];
 
-const STEPS = [
-  { step: "1", title: "Create or join a group", desc: "Start a household group, or join one with an invite code." },
-  { step: "2", title: "Log an expense", desc: "Type it manually, or describe it in plain English and let AI fill in the details." },
-  { step: "3", title: "Track chores", desc: "Assign chores with due dates and see whose turn it is." },
-  { step: "4", title: "Settle up", desc: "See the minimum number of payments needed to clear every balance." },
-];
+const AUTOPLAY_INTERVAL_MS = 3500;
+const AUTOPLAY_RESUME_DELAY_MS = 6000;
 
 export default function LandingPage() {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const isProgrammaticScroll = useRef(false);
+  const resumeTimeoutRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (isProgrammaticScroll.current) return;
+      const index = Math.round(el.scrollLeft / el.clientWidth);
+      setActive((prev) => (prev === index ? prev : index));
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  function goTo(index: number) {
+    const el = trackRef.current;
+    if (!el) return;
+    isProgrammaticScroll.current = true;
+    el.scrollTo({ left: index * el.clientWidth, behavior: "smooth" });
+    setActive(index);
+    window.setTimeout(() => {
+      isProgrammaticScroll.current = false;
+    }, 400);
+  }
+
+  // Auto-advance slides, pausing whenever the user swipes/drags manually.
+  useEffect(() => {
+    if (paused) return;
+    const id = window.setInterval(() => {
+      setActive((prev) => {
+        const next = (prev + 1) % SLIDES.length;
+        goTo(next);
+        return next;
+      });
+    }, AUTOPLAY_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [paused]);
+
+  function pauseThenResume() {
+    setPaused(true);
+    window.clearTimeout(resumeTimeoutRef.current);
+    resumeTimeoutRef.current = window.setTimeout(() => {
+      setPaused(false);
+    }, AUTOPLAY_RESUME_DELAY_MS);
+  }
+
+  useEffect(() => {
+    return () => window.clearTimeout(resumeTimeoutRef.current);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-      {/* Hero */}
-      <header className="relative z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-gradient-to-b from-navy-50 via-white to-white">
+      {/* Ambient backdrop */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-dot-grid [mask-image:radial-gradient(ellipse_70%_50%_at_50%_0%,black_10%,transparent_65%)]" />
+        <div className="absolute left-1/2 top-[-140px] h-[380px] w-[380px] -translate-x-1/2 rounded-full bg-navy-200/50 blur-3xl animate-fade-in" />
+      </div>
+
+      {/* Top bar: brand only, no site nav */}
+      <div
+        className="flex items-center justify-center px-6 pb-2"
+        style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-600 text-base shadow-sm">
+            🏠
+          </span>
           <span className="text-sm font-semibold text-gray-900">Household Ledger</span>
-          <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Log in
-            </Link>
-            <Link
-              to="/signup"
-              className="rounded-md bg-navy-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-navy-500 hover:shadow-md active:scale-95"
-            >
-              Sign up
-            </Link>
-          </div>
         </div>
-      </header>
+      </div>
 
-      <main className="relative">
-        {/* Ambient gradient blobs */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] overflow-hidden">
-          <div className="absolute left-1/2 top-[-120px] h-[480px] w-[480px] -translate-x-[60%] rounded-full bg-navy-200/50 blur-3xl animate-fade-in" />
-          <div
-            className="absolute left-1/2 top-[-60px] h-[420px] w-[420px] translate-x-[10%] rounded-full bg-navy-200/40 blur-3xl animate-fade-in"
-            style={{ animationDelay: "150ms" }}
-          />
+      {/* Headline */}
+      <div className="px-6 pt-6 text-center animate-slide-up">
+        <h1 className="text-3xl font-bold leading-tight tracking-tight text-gray-900">
+          Split the bills.
+          <br />
+          <span className="bg-gradient-to-r from-navy-500 to-navy-800 bg-clip-text text-transparent">
+            Split the chores.
+          </span>
+          <br />
+          Skip the arguments.
+        </h1>
+      </div>
+
+      {/* Swipeable feature carousel fills remaining space */}
+      <div className="mt-6 flex min-h-0 flex-1 flex-col">
+        <div
+          ref={trackRef}
+          onPointerDown={pauseThenResume}
+          className="flex flex-1 snap-x snap-mandatory overflow-x-auto scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {SLIDES.map((s) => (
+            <div
+              key={s.title}
+              className="flex w-full shrink-0 snap-center flex-col items-center justify-center px-8 text-center"
+            >
+              <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-white text-4xl shadow-sm ring-1 ring-black/5">
+                {s.icon}
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">{s.title}</h3>
+              <p className="mt-2 max-w-xs text-sm leading-relaxed text-gray-500">
+                {s.description}
+              </p>
+            </div>
+          ))}
         </div>
 
-        <section className="max-w-4xl mx-auto px-4 pt-16 pb-12 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 tracking-tight animate-slide-up">
-            Split the bills.
-            <br />
-            <span className="bg-gradient-to-r from-navy-500 to-navy-800 bg-clip-text text-transparent">
-              Split the chores.
-            </span>
-            <br />
-            Skip the arguments.
-          </h1>
-          <p
-            className="mt-6 text-lg text-gray-600 max-w-2xl mx-auto animate-slide-up"
-            style={{ animationDelay: "100ms" }}
-          >
-            A shared expense-and-chore tracker for roommates — combining money and
-            chores in one place, with an AI assistant that turns "I paid $85 for
-            groceries" into a structured entry, an algorithm that finds the
-            fewest payments needed to settle up, and self-rotating chores so
-            nobody has to remember whose turn it is.
-          </p>
-          <div
-            className="mt-8 flex items-center justify-center gap-3 animate-slide-up"
-            style={{ animationDelay: "200ms" }}
-          >
-            <Link
-              to="/signup"
-              className="rounded-md bg-navy-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-navy-500 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
-            >
-              Get started free
-            </Link>
-            <Link
-              to="/login"
-              className="rounded-md bg-white border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-900 transition-all hover:bg-gray-50 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
-            >
-              Log in
-            </Link>
-          </div>
-        </section>
+        {/* Dots */}
+        <div className="flex items-center justify-center gap-2 py-4">
+          {SLIDES.map((s, i) => (
+            <button
+              key={s.title}
+              type="button"
+              aria-label={`Go to slide ${i + 1}`}
+              onClick={() => {
+                pauseThenResume();
+                goTo(i);
+              }}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === active ? "w-6 bg-navy-600" : "w-1.5 bg-navy-200"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
 
-        {/* Feature grid */}
-        <section className="max-w-4xl mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {FEATURES.map((f, i) => (
-              <div
-                key={f.title}
-                className="group bg-white rounded-lg shadow p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 animate-slide-up"
-                style={{ animationDelay: `${i * 80}ms` }}
-              >
-                <div className="text-2xl mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6 inline-block">
-                  {f.icon}
-                </div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{f.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* How it works */}
-        <section className="max-w-4xl mx-auto px-4 py-12">
-          <h2 className="text-xl font-semibold text-gray-900 text-center mb-10 animate-slide-up">
-            How it works
-          </h2>
-          <div className="relative grid grid-cols-1 sm:grid-cols-4 gap-8 sm:gap-6">
-            <div className="pointer-events-none absolute left-0 right-0 top-4.5 hidden sm:block h-px bg-gradient-to-r from-transparent via-navy-200 to-transparent" />
-            {STEPS.map((s, i) => (
-              <div
-                key={s.step}
-                className="relative text-center animate-slide-up"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-navy-600 text-sm font-semibold text-white shadow-sm ring-4 ring-gray-50 transition-transform duration-300 hover:scale-110">
-                  {s.step}
-                </div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-1">{s.title}</h4>
-                <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="max-w-4xl mx-auto px-4 pb-20 text-center">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-navy-500 to-navy-800 px-6 py-12 sm:px-12 shadow-lg animate-scale-in">
-            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-            <div className="pointer-events-none absolute -left-6 -bottom-10 h-32 w-32 rounded-full bg-white/10" />
-            <h2 className="text-2xl font-semibold text-white">
-              Ready to stop splitting bills in your head?
-            </h2>
-            <p className="mt-2 text-sm text-navy-100">
-              It takes about a minute to create an account and your first group.
-            </p>
-            <Link
-              to="/signup"
-              className="mt-6 inline-block rounded-md bg-white px-5 py-3 text-sm font-semibold text-navy-600 shadow-sm transition-all hover:bg-navy-50 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
-            >
-              Create your account
-            </Link>
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t border-gray-200 py-6">
-        <p className="text-center text-xs text-gray-400">Household Ledger</p>
-      </footer>
+      {/* Bottom-anchored CTAs, native-app style */}
+      <div
+        className="px-6 pb-6 pt-2"
+        style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+      >
+        <Link
+          to="/signup"
+          className="flex w-full items-center justify-center rounded-full bg-navy-600 px-5 py-3.5 text-base font-semibold text-white shadow-sm transition-all active:scale-[0.98] active:bg-navy-700"
+        >
+          Get started free
+        </Link>
+        <Link
+          to="/login"
+          className="mt-3 flex w-full items-center justify-center rounded-full bg-transparent px-5 py-3.5 text-base font-semibold text-navy-700 transition-all active:scale-[0.98] active:bg-navy-50"
+        >
+          I already have an account
+        </Link>
+      </div>
     </div>
   );
 }

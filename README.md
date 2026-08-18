@@ -248,7 +248,8 @@ household-ledger/
     └── src/
         ├── App.tsx                # Route tree
         ├── components/
-        │   ├── AppLayout.tsx      # Persistent nav shell + group switcher + notification bell
+        │   ├── AppLayout.tsx      # Nav shell: top bar (group switcher, notifications, account
+        │   │                      #   menu) + bottom tab bar for in-group navigation
         │   ├── ProtectedRoute.tsx / AdminRoute.tsx
         │   ├── NotificationBell.tsx
         │   ├── NativeDeepLinkHandler.tsx  # routes an OAuth/checkout return back into the app on Android

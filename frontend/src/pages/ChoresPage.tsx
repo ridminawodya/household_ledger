@@ -91,11 +91,12 @@ export default function ChoresPage() {
 
   async function handleToggleAutoRotate(choreId: string, next: boolean) {
     setTogglingId(choreId);
+    setLoadError(null);
     try {
       await api.updateChoreAutoRotate(choreId, next);
       await loadAll();
-    } catch {
-      // reload will reflect the true server state either way
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Failed to update auto-rotate");
     } finally {
       setTogglingId(null);
     }
@@ -126,11 +127,12 @@ export default function ChoresPage() {
 
   async function handleComplete(assignmentId: string) {
     setCompletingId(assignmentId);
+    setLoadError(null);
     try {
       await api.completeChoreAssignment(assignmentId);
       await loadAll();
-    } catch {
-      // surfaced implicitly via unchanged state; list reload will show current truth
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Failed to mark chore complete");
     } finally {
       setCompletingId(null);
     }

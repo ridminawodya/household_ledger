@@ -50,3 +50,21 @@ export async function createCheckoutUrl({ userId, userEmail }: CreateCheckoutPar
   const json = (await res.json()) as { data: { attributes: { url: string } } };
   return json.data.attributes.url;
 }
+
+export async function cancelSubscription(subscriptionId: string): Promise<void> {
+  const apiKey = getEnv("LEMONSQUEEZY_API_KEY");
+
+  const res = await fetch(`${API_BASE}/subscriptions/${subscriptionId}`, {
+    method: "DELETE",
+    headers: {
+      Accept: "application/vnd.api+json",
+      "Content-Type": "application/vnd.api+json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Lemon Squeezy subscription cancellation failed (${res.status}): ${body}`);
+  }
+}

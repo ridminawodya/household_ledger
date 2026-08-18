@@ -16,7 +16,7 @@ router.post("/webhook", async (req, res) => {
 
   let payload: {
     meta: { event_name: string; custom_data?: { user_id?: string } };
-    data: { attributes: { status: string; user_email: string } };
+    data: { id: string; attributes: { status: string; user_email: string } };
   };
   try {
     payload = JSON.parse(rawBody.toString("utf8"));
@@ -43,12 +43,17 @@ router.post("/webhook", async (req, res) => {
   }
 
   const isActive = ACTIVE_SUBSCRIPTION_STATUSES.has(status);
+  const subscriptionId = payload.data?.id ?? null;
 
   await prisma.user.update({
     where: { id: user.id },
     data: isActive
-      ? { plan: "premium", premiumSince: user.premiumSince ?? new Date() }
-      : { plan: "free", premiumSince: null },
+      ? {
+          plan: "premium",
+          premiumSince: user.premiumSince ?? new Date(),
+          lemonSqueezySubscriptionId: subscriptionId ?? user.lemonSqueezySubscriptionId,
+        }
+      : { plan: "free", premiumSince: null, lemonSqueezySubscriptionId: null },
   });
 
   res.json({ received: true });

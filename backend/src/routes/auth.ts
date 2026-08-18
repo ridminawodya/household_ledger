@@ -1,9 +1,12 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { hashPassword, verifyPassword, signToken, isAdminEmail } from "../lib/auth";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth";
+import { sendPasswordResetEmail } from "../lib/email";
+import { cancelSubscription } from "../lib/lemonsqueezy";
 
 const router = Router();
 
@@ -174,6 +177,129 @@ router.get("/google/callback", async (req, res) => {
   } catch {
     res.redirect(`${errorRedirectBase}?error=${encodeURIComponent("Google sign-in failed")}`);
   }
+});
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function hashResetToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+});
+
+router.post("/forgot-password", async (req, res) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+
+  // Always respond the same way whether or not the account exists, and
+  // whether or not it has a password (Google-only accounts can't reset a
+  // password that doesn't exist) -- avoids leaking which emails are registered.
+  if (user && user.passwordHash) {
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashResetToken(rawToken),
+        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+      },
+    });
+
+    const resetUrl = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(rawToken)}`;
+    try {
+      await sendPasswordResetEmail(user.email, resetUrl);
+    } catch (err) {
+      console.error("Failed to send password reset email:", err);
+      return res.status(502).json({ error: "Email sending is not configured on this server" });
+    }
+  }
+
+  res.json({ message: "If an account exists for that email, a reset link has been sent." });
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+router.post("/reset-password", async (req, res) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const tokenHash = hashResetToken(parsed.data.token);
+  const resetToken = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+
+  if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
+    return res.status(400).json({ error: "This reset link is invalid or has expired" });
+  }
+
+  const passwordHash = await hashPassword(parsed.data.password);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
+    prisma.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } }),
+  ]);
+
+  res.json({ message: "Password updated. You can now log in." });
+});
+
+router.delete("/me", requireAuth, async (req: AuthedRequest, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.userId! } });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const createdGroups = await prisma.group.count({ where: { createdById: user.id } });
+  if (createdGroups > 0) {
+    return res.status(409).json({
+      error: "Delete or transfer the groups you created before deleting your account.",
+    });
+  }
+
+  const memberships = await prisma.groupMember.findMany({
+    where: { userId: user.id },
+    select: { groupId: true },
+  });
+  for (const { groupId } of memberships) {
+    const [expenses, shares, settlements] = await Promise.all([
+      prisma.expense.findMany({
+        where: { groupId, deletedAt: null },
+        select: { id: true, paidById: true, amountCents: true },
+      }),
+      prisma.expenseShare.findMany({
+        where: { expense: { groupId, deletedAt: null } },
+        select: { expenseId: true, userId: true, amountCents: true },
+      }),
+      prisma.settlement.findMany({
+        where: { groupId },
+        select: { fromUserId: true, toUserId: true, amountCents: true },
+      }),
+    ]);
+    const { computeBalances } = await import("../lib/settleUp");
+    const balance = computeBalances(expenses, shares, settlements).find((b) => b.userId === user.id);
+    if (balance && balance.amountCents !== 0) {
+      return res.status(409).json({
+        error: "You have an unsettled balance in one of your groups. Settle up before deleting your account.",
+      });
+    }
+  }
+
+  if (user.plan === "premium" && user.lemonSqueezySubscriptionId) {
+    try {
+      await cancelSubscription(user.lemonSqueezySubscriptionId);
+    } catch (err) {
+      console.error("Failed to cancel subscription during account deletion:", err);
+    }
+  }
+
+  await prisma.user.delete({ where: { id: user.id } });
+  res.status(204).send();
 });
 
 export default router;

@@ -6,6 +6,8 @@ import AppLayout from "./components/AppLayout";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import GoogleCallbackPage from "./pages/GoogleCallbackPage";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
@@ -14,6 +16,7 @@ import SettleUpPage from "./pages/SettleUpPage";
 import ChoresPage from "./pages/ChoresPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import BillingPage from "./pages/BillingPage";
+import AccountPage from "./pages/AccountPage";
 import NativeDeepLinkHandler from "./components/NativeDeepLinkHandler";
 
 function App() {
@@ -25,6 +28,8 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
@@ -34,6 +39,7 @@ function App() {
               <Route path="/groups/:groupId/settle-up" element={<SettleUpPage />} />
               <Route path="/groups/:groupId/chores" element={<ChoresPage />} />
               <Route path="/billing" element={<BillingPage />} />
+              <Route path="/account" element={<AccountPage />} />
             </Route>
           </Route>
           <Route element={<AdminRoute />}>

@@ -97,6 +97,11 @@ export default function LoginPage() {
               {showPassword ? "Hide" : "Show"}
             </button>
           </div>
+          <div className="text-right">
+            <Link to="/forgot-password" className="text-xs text-navy-600 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           {error && <p className="text-sm text-red-600 animate-slide-up">{error}</p>}
           <button
             type="submit"
